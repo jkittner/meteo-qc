@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from meteo_qc import apply_qc
-from meteo_qc import column_mapping
+from meteo_qc import ColumnMapping
 from meteo_qc import register
 from meteo_qc import Result
 
@@ -18,8 +18,9 @@ def data():
 
 def test_invalid_dataframe_index():
     df = pd.DataFrame(data=[[10, 20], [10, 20]])
+    column_mapping = ColumnMapping()
     with pytest.raises(TypeError) as exc_info:
-        apply_qc(df)
+        apply_qc(df, column_mapping)
 
     msg, = exc_info.value.args
     assert msg == (
@@ -38,7 +39,8 @@ def test_generic_good_data():
         ),
         columns=['a', 'b'],
     )
-    results = apply_qc(df)
+    column_mapping = ColumnMapping()
+    results = apply_qc(df, column_mapping)
     assert results['columns']['a']['missing_timestamps'].passed is True
     assert results['columns']['a']['missing_timestamps'].msg is None
 
@@ -53,7 +55,8 @@ def test_generic_missing_timestamp_data_too_short():
         ),
         columns=['a', 'b'],
     )
-    results = apply_qc(df)
+    column_mapping = ColumnMapping()
+    results = apply_qc(df, column_mapping)
     assert results['columns']['a']['missing_timestamps'].passed is False
     assert results['columns']['a']['missing_timestamps'].msg == (
         'cannot determine temporal resolution frequency'
@@ -65,7 +68,8 @@ def test_generic_missing_timestamp_data_too_short():
 
 
 def test_generic_checks_are_applied_as_default(data):
-    results = apply_qc(data)
+    column_mapping = ColumnMapping()
+    results = apply_qc(data, column_mapping)
     for col in results['columns']:
         assert set(results['columns'][col].keys()) == {
             'missing_timestamps', 'null_values',
@@ -88,32 +92,32 @@ def test_generic_checks_are_applied_as_default(data):
     # null values are detected
     assert pressure_res['null_values'].passed is False
     assert pressure_res['null_values'].function == 'null_values'
-    assert pressure_res['null_values'].msg == 'found 1 values that are null'
+    assert pressure_res['null_values'].msg == 'found 7 values that are null'
     assert temp_res['null_values'].passed is False
     assert temp_res['null_values'].function == 'null_values'
-    assert temp_res['null_values'].msg == 'found 1 values that are null'
+    assert temp_res['null_values'].msg == 'found 7 values that are null'
     assert sunshine_res['null_values'].passed is True
 
 
 def test_changed_column_mapping_pressure_checks(data):
-    column_mapping['pressure_reduced'].append('pressure')
-    column_mapping['pressure'].append('pressure')
-    results = apply_qc(data)
-    pressure_red_range = results['columns']['pressure_reduced']['range_check']
-    pressure_range = results['columns']['pressure']['range_check']
-    pressure_spike = results['columns']['pressure']['spike_dip_check']
+    column_mapping = ColumnMapping()
+    column_mapping['pressure_reduced'].add_group('pressure')
+    column_mapping['pressure'].add_group('pressure')
+    column_mapping['pressure_persistent'].add_group('pressure')
+    results = apply_qc(data, column_mapping)
+    pressure_red_range = results['columns']['pressure_reduced']['range']
+    pressure_range = results['columns']['pressure']['range']
+    pressure_spike = results['columns']['pressure']['spike_dip']
 
     assert pressure_red_range.passed is False
     assert pressure_red_range.function == 'range_check'
-    assert pressure_red_range.msg == (
-        'pressure out of allowed range of [700 - 1080]'
-    )
+    assert pressure_red_range.msg == 'out of allowed range of [860 - 1055]'
     assert pressure_range.passed is True
     assert pressure_range.msg is None
     # spike ro dip
     assert pressure_spike.passed is False
     assert pressure_spike.msg == (
-        'spikes or dips detected. Exceeded allowed delta of 5'
+        'spikes or dips detected. Exceeded allowed delta of 0.3 / min'
     )
 
 
@@ -130,7 +134,8 @@ def test_can_register_new_check(data):
         else:
             return Result(over_1000.__name__, passed=True)
 
-    results = apply_qc(data)
+    column_mapping = ColumnMapping()
+    results = apply_qc(data, column_mapping)
     pressure_result = results['columns']['pressure_reduced']['over_1000']
     temp_result = results['columns']['temp']['over_1000']
 
@@ -141,3 +146,51 @@ def test_can_register_new_check(data):
     assert temp_result.passed is True
     assert temp_result.function == 'over_1000'
     assert temp_result.msg is None
+
+
+def test_changed_column_mapping_pressure_persistence_check(data):
+    column_mapping = ColumnMapping()
+    column_mapping['pressure_persistent'].add_group('pressure')
+    results = apply_qc(data, column_mapping)
+    persists = results['columns']['pressure_persistent']['persistence']
+    assert persists.passed is False
+    assert persists.msg == 'some values are the same for longer than 6:00:00'
+    assert persists.function == 'persistence_check'
+
+
+def test_changed_column_mapping_pressure_persistence_check_data_short():
+    column_mapping = ColumnMapping()
+    df = pd.DataFrame(
+        data=[[10, 20], [10, 20], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:20',
+            freq='10T',
+        ),
+        columns=['a', 'b'],
+    )
+    column_mapping['a'].add_group('pressure')
+    results = apply_qc(df, column_mapping)
+    persists = results['columns']['a']['persistence']
+    assert persists.passed is True
+
+
+def test_changed_column_mapping_pressure_persistence_check_no_freq():
+    column_mapping = ColumnMapping()
+    df = pd.DataFrame(
+        data=[[10, 20], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:10',
+            freq='10T',
+        ),
+        columns=['a', 'b'],
+    )
+    assert isinstance(df.index, pd.DatetimeIndex)
+    df.index.freq = None  # type: ignore [misc]
+    column_mapping['a'].add_group('pressure')
+    results = apply_qc(df, column_mapping)
+    persists = results['columns']['a']['persistence']
+    assert persists.passed is False
+    assert persists.function == 'persistence_check'
+    assert persists.msg == 'cannot determine temporal resolution frequency'

@@ -1,44 +1,36 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pandas as pd
 
 from meteo_qc._data import register
 from meteo_qc._data import Result
-from meteo_qc.checks import has_spikes_or_dip
-from meteo_qc.checks import out_of_bounds
+from meteo_qc.checks import persistence_check
+from meteo_qc.checks import range_check
+from meteo_qc.checks import spike_dip_check
 
 
 @register('pressure')
-def range_check(
+def range(
         s: pd.Series[float],
-        lower_bound: float = 700,
-        upper_bound: float = 1080,
+        lower_bound: float = 860,
+        upper_bound: float = 1055,
 ) -> Result:
-    result = out_of_bounds(s, lower=lower_bound, upper=upper_bound)
-    if result is True:
-        return Result(
-            function=range_check.__name__,
-            passed=False,
-            msg=(
-                f'pressure out of allowed range of '
-                f'[{lower_bound} - {upper_bound}]'
-            ),
-        )
-    else:
-        return Result(function=range_check.__name__, passed=True)
+    return range_check(s, lower_bound=lower_bound, upper_bound=upper_bound)
 
 
 @register('pressure')
-def spike_dip_check(s: pd.Series[float], delta: float = 5) -> Result:
-    # TODO: make delta per minute to calculate the correct one here
-    result = has_spikes_or_dip(s, delta=delta)
-    if result is True:
-        return Result(
-            function=spike_dip_check.__name__,
-            passed=False,
-            msg=(
-                f'spikes or dips detected. Exceeded allowed delta of {delta}'
-            ),
-        )
-    else:
-        return Result(function=spike_dip_check.__name__, passed=True)
+def spike_dip(
+        s: pd.Series[float],
+        delta: float = 0.3,
+) -> Result:
+    return spike_dip_check(s, delta=delta)
+
+
+@register('pressure')
+def persistence(
+        s: pd.Series[float],
+        window: timedelta = timedelta(hours=6),
+) -> Result:
+    return persistence_check(s, window=window)

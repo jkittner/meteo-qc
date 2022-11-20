@@ -5,6 +5,7 @@ from typing import TypedDict
 
 import pandas as pd
 
+from meteo_qc._colum_mapping import ColumnMapping
 from meteo_qc._data import FUNCS
 from meteo_qc._data import Result
 
@@ -13,10 +14,7 @@ class FinalResult(TypedDict):
     columns: dict[str, dict[str, Result]]
 
 
-column_mapping: dict[str, list[str]] = defaultdict(lambda: ['generic'])
-
-
-def apply_qc(df: pd.DataFrame) -> FinalResult:
+def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
     final_res: FinalResult = {'columns': defaultdict(dict)}
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(
