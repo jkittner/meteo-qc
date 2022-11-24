@@ -40,9 +40,9 @@ def test_generic_good_data():
         columns=['a', 'b'],
     )
     column_mapping = ColumnMapping()
-    results = apply_qc(df, column_mapping)
-    assert results['columns']['a']['missing_timestamps'].passed is True
-    assert results['columns']['a']['missing_timestamps'].msg is None
+    results = apply_qc(df, column_mapping)['columns']['a']['results']
+    assert results['missing_timestamps'].passed is True
+    assert results['missing_timestamps'].msg is None
 
 
 def test_generic_missing_timestamp_data_too_short():
@@ -56,13 +56,13 @@ def test_generic_missing_timestamp_data_too_short():
         columns=['a', 'b'],
     )
     column_mapping = ColumnMapping()
-    results = apply_qc(df, column_mapping)
-    assert results['columns']['a']['missing_timestamps'].passed is False
-    assert results['columns']['a']['missing_timestamps'].msg == (
+    results = apply_qc(df, column_mapping)['columns']
+    assert results['a']['results']['missing_timestamps'].passed is False
+    assert results['a']['results']['missing_timestamps'].msg == (
         'cannot determine temporal resolution frequency'
     )
-    assert results['columns']['b']['missing_timestamps'].passed is False
-    assert results['columns']['b']['missing_timestamps'].msg == (
+    assert results['b']['results']['missing_timestamps'].passed is False
+    assert results['b']['results']['missing_timestamps'].msg == (
         'cannot determine temporal resolution frequency'
     )
 
@@ -71,12 +71,13 @@ def test_generic_checks_are_applied_as_default(data):
     column_mapping = ColumnMapping()
     results = apply_qc(data, column_mapping)
     for col in results['columns']:
-        assert set(results['columns'][col].keys()) == {
+        assert set(results['columns'][col]['results'].keys()) == {
             'missing_timestamps', 'null_values',
         }
-    pressure_res = results['columns']['pressure_reduced']
-    temp_res = results['columns']['temp']
-    sunshine_res = results['columns']['sunshine_duration']
+        assert results['columns'][col]['passed'] is False
+    pressure_res = results['columns']['pressure_reduced']['results']
+    temp_res = results['columns']['temp']['results']
+    sunshine_res = results['columns']['sunshine_duration']['results']
 
     # missing timestamps are listed
     assert pressure_res['missing_timestamps'].passed is False
@@ -104,10 +105,10 @@ def test_changed_column_mapping_pressure_checks(data):
     column_mapping['pressure_reduced'].add_group('pressure')
     column_mapping['pressure'].add_group('pressure')
     column_mapping['pressure_persistent'].add_group('pressure')
-    results = apply_qc(data, column_mapping)
-    pressure_red_range = results['columns']['pressure_reduced']['range_check']
-    pressure_range = results['columns']['pressure']['range_check']
-    pressure_spike = results['columns']['pressure']['spike_dip_check']
+    results = apply_qc(data, column_mapping)['columns']
+    pressure_red_range = results['pressure_reduced']['results']['range_check']
+    pressure_range = results['pressure']['results']['range_check']
+    pressure_spike = results['pressure']['results']['spike_dip_check']
 
     assert pressure_red_range.passed is False
     assert pressure_red_range.function == 'range_check'
@@ -135,9 +136,9 @@ def test_can_register_new_check(data):
             return Result(over_1000.__name__, passed=True)
 
     column_mapping = ColumnMapping()
-    results = apply_qc(data, column_mapping)
-    pressure_result = results['columns']['pressure_reduced']['over_1000']
-    temp_result = results['columns']['temp']['over_1000']
+    results = apply_qc(data, column_mapping)['columns']
+    pressure_result = results['pressure_reduced']['results']['over_1000']
+    temp_result = results['temp']['results']['over_1000']
 
     assert pressure_result.passed is False
     assert pressure_result.function == 'over_1000'
@@ -151,8 +152,8 @@ def test_can_register_new_check(data):
 def test_changed_column_mapping_pressure_persistence_check(data):
     column_mapping = ColumnMapping()
     column_mapping['pressure_persistent'].add_group('pressure')
-    results = apply_qc(data, column_mapping)
-    persists = results['columns']['pressure_persistent']['persistence_check']
+    results = apply_qc(data, column_mapping)['columns']
+    persists = results['pressure_persistent']['results']['persistence_check']
     assert persists.passed is False
     assert persists.msg == 'some values are the same for longer than 6:00:00'
     assert persists.function == 'persistence_check'
@@ -170,8 +171,8 @@ def test_changed_column_mapping_pressure_persistence_check_data_short():
         columns=['a', 'b'],
     )
     column_mapping['a'].add_group('pressure')
-    results = apply_qc(df, column_mapping)
-    persists = results['columns']['a']['persistence_check']
+    results = apply_qc(df, column_mapping)['columns']
+    persists = results['a']['results']['persistence_check']
     assert persists.passed is True
 
 
@@ -189,8 +190,8 @@ def test_changed_column_mapping_pressure_persistence_check_no_freq():
     assert isinstance(df.index, pd.DatetimeIndex)
     df.index.freq = None  # type: ignore [misc]
     column_mapping['a'].add_group('pressure')
-    results = apply_qc(df, column_mapping)
-    persists = results['columns']['a']['persistence_check']
+    results = apply_qc(df, column_mapping)['columns']
+    persists = results['a']['results']['persistence_check']
     assert persists.passed is False
     assert persists.function == 'persistence_check'
     assert persists.msg == 'cannot determine temporal resolution frequency'
@@ -200,12 +201,14 @@ def test_stacked_decorators_persistence(data):
     column_mapping = ColumnMapping()
     column_mapping['pressure_reduced'].add_group('pressure')
     column_mapping['temp'].add_group('temperature')
-    results = apply_qc(data, column_mapping)
-    persists_p = results['columns']['pressure_reduced']['persistence_check']
+    results = apply_qc(data, column_mapping)['columns']
+    persists_p = results['pressure_reduced']['results']['persistence_check']
     assert persists_p.passed is True
     assert persists_p.msg is None
     assert persists_p.function == 'persistence_check'
-    persists_t = results['columns']['temp']['persistence_check']
+    assert results['pressure_reduced']['passed'] is False
+    persists_t = results['temp']['results']['persistence_check']
     assert persists_t.passed is True
     assert persists_t.msg is None
     assert persists_t.function == 'persistence_check'
+    assert results['temp']['passed'] is False

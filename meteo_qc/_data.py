@@ -5,7 +5,6 @@ from collections import defaultdict
 from typing import Any
 from typing import Callable
 from typing import NamedTuple
-from typing import TYPE_CHECKING
 from typing import TypedDict
 
 from meteo_qc import _plugins
@@ -18,9 +17,8 @@ class Result(NamedTuple):
     data: list[list[float]] | None = None
 
 
-if TYPE_CHECKING:
-    # TODO: Callable[[pd.Series[float]], Result]
-    FUNC_T = Any
+# TODO: this needs the series and variable number of kwargs
+FUNC_T = Callable[..., Result]
 
 
 class FunctionInfo(TypedDict):

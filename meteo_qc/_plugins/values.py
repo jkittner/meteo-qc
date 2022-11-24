@@ -25,7 +25,10 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     return freq  # type: ignore[return-value]
 
 
-def _has_spikes_or_dip(s: pd.Series[float], delta: float) -> tuple[bool, pd.DataFrame]:
+def _has_spikes_or_dip(
+        s: pd.Series[float],
+        delta: float,
+) -> tuple[bool, pd.DataFrame]:
     df = s.to_frame()
 
     def _compare(s: pd.Series[float]) -> bool:
@@ -40,18 +43,21 @@ def _has_spikes_or_dip(s: pd.Series[float], delta: float) -> tuple[bool, pd.Data
     ).apply(_compare).astype(bool)
     # TODO: also return where, and make sure the spike or dip is labelled
     # correctly
-    return bool(df['flag'].any()), df[df['flag'] == True]
+    return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
 
 
-def _is_persistent(s: pd.Series[float], window: int) -> tuple[bool, pd.DataFrame]:
+def _is_persistent(
+        s: pd.Series[float],
+        window: int,
+) -> tuple[bool, pd.DataFrame]:
     df = s.to_frame()
+    df['flag'] = False
     if len(df) <= window:
-        return False, df[df['flag'] == True]
+        return False, df[df['flag'] == True]  # noqa: E712
 
     # pandas rolling sucks pretty hard, therefore we need to implement our own
     left = 0
     right = window
-    df['flag'] = False
     while right <= len(df):
         df_window = df.iloc[left:right]
         # check if first value is the same as all other values
@@ -65,7 +71,7 @@ def _is_persistent(s: pd.Series[float], window: int) -> tuple[bool, pd.DataFrame
 
     # TODO: also return where, and make sure the spike or dip is labelled
     # correctly
-    return bool(df['flag'].any()), df[df['flag'] == True]
+    return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
 
 
 @register('temperature', lower_bound=0, upper_bound=10)

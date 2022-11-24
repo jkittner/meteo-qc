@@ -43,7 +43,7 @@ def null_values(s: pd.Series[float]) -> Result:
             function=null_values.__name__,
             passed=False,
             msg=f'found {null_vals} values that are null',
-            data=df[df['flag'] == True].values.tolist(),
+            data=df[df['flag'] == True].values.tolist(),  # noqa: E712
         )
     else:
         return Result(function=null_values.__name__, passed=True)

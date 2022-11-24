@@ -10,12 +10,21 @@ from meteo_qc._data import FUNCS
 from meteo_qc._data import Result
 
 
+class ColumnResult(TypedDict):
+    results: dict[str, Result]
+    passed: bool
+
+
 class FinalResult(TypedDict):
-    columns: dict[str, dict[str, Result]]
+    columns: dict[str, ColumnResult]
 
 
 def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
-    final_res: FinalResult = {'columns': defaultdict(dict)}
+    final_res: FinalResult = {
+        'columns': defaultdict(
+            lambda: {'results': {}, 'passed': False},
+        ),
+    }
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(
             f'the pandas.DataFrame index must be of type pandas.DatetimeIndex,'
@@ -24,13 +33,18 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
     # sort the data by the DateTimeIndex
     df_sorted = df.sort_index()
     for column in df_sorted.columns:
+        # all groups associated with this column
         qc_types = column_mapping[column]
+        final_res_col = final_res['columns'][column]
         for qc_type in qc_types:
-            funcs = FUNCS[qc_type]
-            for f in funcs:
-                final_res['columns'][column][f['func'].__name__] = f['func'](
-                    df_sorted[column],
-                    **f['kwargs'],
-                )
+            # all functions registered for this group
+            registerd_funcs = FUNCS[qc_type]
+            for func in registerd_funcs:
+                call_result = func['func'](df_sorted[column], **func['kwargs'])
+                final_res_col['results'][func['func'].__name__] = call_result
+        # check if entire column passed
+        final_res_col['passed'] = all(
+            [i.passed for i in final_res_col['results'].values()],
+        )
 
     return final_res
