@@ -74,33 +74,50 @@ def _is_persistent(
     return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
 
 
-@register('temperature', lower_bound=0, upper_bound=10)
+@register('temperature', lower_bound=-40, upper_bound=50)
 @register('dew_point', lower_bound=-60, upper_bound=50)
 @register('relhum', lower_bound=10, upper_bound=100)
 @register('windspeed', lower_bound=0, upper_bound=30)
 @register('winddirection', lower_bound=0, upper_bound=360)
-@register('global_radiation', lower_bound=0, upper_bound=1100)
 @register('pressure', lower_bound=860, upper_bound=1055)
 def range_check(
         s: pd.Series[float],
         lower_bound: float,
         upper_bound: float,
 ) -> Result:
-    result = bool(s.min() < lower_bound or s.max() > upper_bound)
+    df = s.to_frame()
+    df['flag'] = False
+    df['flag'] = (
+        df.iloc[:, 0].lt(lower_bound) |
+        df.iloc[:, 0].gt(upper_bound)
+    )
+
+    if df.index.name is None:
+        date_name = 'index'
+    else:
+        date_name = df.index.name
+
+    df = df.reset_index()
+    # we need something json serializable
+    df[date_name] = df[date_name].astype(int)
+    # replace NaNs with NULLs, since json tokenizing can't handle them
+    df = df.replace([float('nan')], [None])
+    result = bool(df['flag'].any())
     if result is True:
         return Result(
             function=range_check.__name__,
             passed=False,
             msg=f'out of allowed range of [{lower_bound} - {upper_bound}]',
+            data=df[df['flag'] == True].values.tolist(),  # noqa: E712
         )
     else:
         return Result(function=range_check.__name__, passed=True)
 
 
-@register('temperature', delta=0.2)
-@register('dew_point', delta=0.2)
-@register('relhum', delta=0.8)
-@register('pressure', delta=0.3)
+@register('temperature', delta=0.3)
+@register('dew_point', delta=0.3)
+@register('relhum', delta=1)
+@register('pressure', delta=0.5)
 def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     assert isinstance(s.index, pd.DatetimeIndex)
     freqstr = s.index.freqstr
@@ -119,7 +136,17 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
     s = s.reindex(full_idx)
     result, df = _has_spikes_or_dip(s, delta=_delta)
+
+    if df.index.name is None:
+        date_name = 'index'
+    else:
+        date_name = df.index.name
+
     df = df.reset_index()
+    # we need something json serializable
+    df[date_name] = df[date_name].astype(int)
+    # replace NaNs with NULLs, since json tokenizing can't handle them
+    df = df.replace([float('nan')], [None])
     if result is True:
         return Result(
             function=spike_dip_check.__name__,
@@ -134,11 +161,11 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
         return Result(function=spike_dip_check.__name__, passed=True)
 
 
-@register('temperature', window=timedelta(hours=2))
-@register('dew_point', window=timedelta(hours=2))
+@register('temperature', window=timedelta(hours=3))
+@register('dew_point', window=timedelta(hours=3))
 @register('windspeed', window=timedelta(hours=5))
 @register('relhum', window=timedelta(hours=5))
-@register('global_radiation', window=timedelta(minutes=10))
+@register('global_radiation', window=timedelta(minutes=20))
 @register('pressure', window=timedelta(hours=6))
 def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
     assert isinstance(s.index, pd.DatetimeIndex)
@@ -159,7 +186,17 @@ def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
     full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
     s = s.reindex(full_idx)
     result, df = _is_persistent(s, window=timestamps_per_interval)
+
+    if df.index.name is None:
+        date_name = 'index'
+    else:
+        date_name = df.index.name
+
     df = df.reset_index()
+    # we need something json serializable
+    df[date_name] = df[date_name].astype(int)
+    # replace NaNs with NULLs, since json tokenizing can't handle them
+    df = df.replace([float('nan')], [None])
     if result is True:
         return Result(
             function=persistence_check.__name__,

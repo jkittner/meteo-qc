@@ -118,7 +118,7 @@ def test_changed_column_mapping_pressure_checks(data):
     # spike ro dip
     assert pressure_spike.passed is False
     assert pressure_spike.msg == (
-        'spikes or dips detected. Exceeded allowed delta of 0.3 / min'
+        'spikes or dips detected. Exceeded allowed delta of 0.5 / min'
     )
 
 

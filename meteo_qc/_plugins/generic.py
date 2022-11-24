@@ -37,7 +37,16 @@ def null_values(s: pd.Series[float]) -> Result:
     df = s.to_frame()
     df['flag'] = s.isnull()
     null_vals = sum(df['flag'])
+
+    if df.index.name is None:
+        date_name = 'index'
+    else:
+        date_name = df.index.name
+
     df = df.reset_index()
+    df[date_name] = df[date_name].astype(int)
+    # replace NaNs with NULLs, since json tokenizing can't handle them
+    df = df.replace([float('nan')], [None])
     if null_vals > 0:
         return Result(
             function=null_values.__name__,

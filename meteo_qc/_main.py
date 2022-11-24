@@ -17,6 +17,7 @@ class ColumnResult(TypedDict):
 
 class FinalResult(TypedDict):
     columns: dict[str, ColumnResult]
+    passed: bool
 
 
 def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
@@ -24,6 +25,7 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
         'columns': defaultdict(
             lambda: {'results': {}, 'passed': False},
         ),
+        'passed': False,
     }
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(
@@ -46,5 +48,9 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
         final_res_col['passed'] = all(
             [i.passed for i in final_res_col['results'].values()],
         )
+    # check if the entire QC failed
+    final_res['passed'] = all(
+        [i['passed'] for i in final_res['columns'].values()],
+    )
 
     return final_res
