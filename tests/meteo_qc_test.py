@@ -118,7 +118,7 @@ def test_changed_column_mapping_pressure_checks(data):
     # spike ro dip
     assert pressure_spike.passed is False
     assert pressure_spike.msg == (
-        'spikes or dips detected. Exceeded allowed delta of 0.5 / min'
+        'spikes or dips detected. Exceeded allowed delta of 0.3 / min'
     )
 
 
@@ -212,3 +212,10 @@ def test_stacked_decorators_persistence(data):
     assert persists_t.msg is None
     assert persists_t.function == 'persistence_check'
     assert results['temp']['passed'] is False
+
+
+def test_timestamps_are_correct(data):
+    column_mapping = ColumnMapping()
+    results = apply_qc(data, column_mapping)['columns']
+    data = results['temp']['results']['null_values'].data
+    assert data[0][0] == 16410348000000

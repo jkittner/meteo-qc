@@ -99,7 +99,8 @@ def range_check(
 
     df = df.reset_index()
     # we need something json serializable
-    df[date_name] = df[date_name].astype(int)
+    # timestamp to milliseconds
+    df[date_name] = df[date_name].astype(int) // 100000
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     result = bool(df['flag'].any())
@@ -116,9 +117,14 @@ def range_check(
 
 @register('temperature', delta=0.3)
 @register('dew_point', delta=0.3)
-@register('relhum', delta=1)
-@register('pressure', delta=0.5)
+@register('relhum', delta=4)
+@register('pressure', delta=0.3)
 def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
+    """
+    check if data has spikes or dips
+
+    :param delta: maximum change per minute
+    """
     assert isinstance(s.index, pd.DatetimeIndex)
     freqstr = s.index.freqstr
     if freqstr is None:
@@ -144,7 +150,8 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
 
     df = df.reset_index()
     # we need something json serializable
-    df[date_name] = df[date_name].astype(int)
+    # timestamp to milliseconds
+    df[date_name] = df[date_name].astype(int) // 100000
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if result is True:
@@ -161,13 +168,15 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
         return Result(function=spike_dip_check.__name__, passed=True)
 
 
-@register('temperature', window=timedelta(hours=3))
-@register('dew_point', window=timedelta(hours=3))
+@register('temperature', window=timedelta(hours=2))
+@register('dew_point', window=timedelta(hours=2))
 @register('windspeed', window=timedelta(hours=5))
 @register('relhum', window=timedelta(hours=5))
-@register('global_radiation', window=timedelta(minutes=20))
 @register('pressure', window=timedelta(hours=6))
 def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
+    """
+    :param window: moving window where the value must have changed
+    """
     assert isinstance(s.index, pd.DatetimeIndex)
     freqstr = s.index.freqstr
     if freqstr is None:
@@ -194,7 +203,8 @@ def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
 
     df = df.reset_index()
     # we need something json serializable
-    df[date_name] = df[date_name].astype(int)
+    # timestamp to milliseconds
+    df[date_name] = df[date_name].astype(int) // 100000
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if result is True:

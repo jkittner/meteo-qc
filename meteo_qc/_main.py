@@ -18,20 +18,24 @@ class ColumnResult(TypedDict):
 class FinalResult(TypedDict):
     columns: dict[str, ColumnResult]
     passed: bool
+    data_start_date: int
+    data_end_date: int
 
 
 def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
-    final_res: FinalResult = {
-        'columns': defaultdict(
-            lambda: {'results': {}, 'passed': False},
-        ),
-        'passed': False,
-    }
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(
             f'the pandas.DataFrame index must be of type pandas.DatetimeIndex,'
             f' not {type(df.index)}',
         )
+    final_res: FinalResult = {
+        'columns': defaultdict(
+            lambda: {'results': {}, 'passed': False},
+        ),
+        'passed': False,
+        'data_start_date': int(df.index.min().timestamp() * 10000),
+        'data_end_date': int(df.index.max().timestamp() * 10000),
+    }
     # sort the data by the DateTimeIndex
     df_sorted = df.sort_index()
     for column in df_sorted.columns:
