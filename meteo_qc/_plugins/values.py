@@ -55,22 +55,18 @@ def _is_persistent(
     if len(df) <= window:
         return False, df[df['flag'] == True]  # noqa: E712
 
-    # pandas rolling sucks pretty hard, therefore we need to implement our own
-    left = 0
-    right = window
-    while right <= len(df):
-        df_window = df.iloc[left:right]
-        # check if first value is the same as all other values
-        first_val = df_window.iloc[0, 0]
-        df_window['equals'] = df_window.iloc[:, 0] == first_val
-        if df_window['equals'].sum() == window:
-            df['flag'].iloc[left:right] = True
+    def _equals(x: pd.Series[float]) -> bool:
+        if len(x) >= window:
+            first_val = x.iloc[0]
+            return bool((x == first_val).all())
+        else:
+            return False
 
-        right += 1
-        left += 1
-
-    # TODO: also return where, and make sure the spike or dip is labelled
-    # correctly
+    df['flag'] = df[s.name].rolling(
+        window=window,
+        min_periods=1,
+        closed='right',
+    ).apply(_equals).astype(bool)
     return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
 
 
