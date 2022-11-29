@@ -8,6 +8,7 @@ from meteo_qc._colum_mapping import GroupList
 def test_trying_to_add_unregistered_group():
     c = ColumnMapping()
     with pytest.raises(KeyError) as exc_info:
+        assert 'unregistered' not in c['foo']
         c['foo'].add_group('unregistered')
 
     msg, = exc_info.value.args

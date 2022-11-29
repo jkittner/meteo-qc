@@ -28,7 +28,7 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     idx_diff = s.index[1:] - s.index[:-1]
     offset = pd.tseries.frequencies.to_offset(idx_diff.min())
     freq = None
-    if offset is not None:
+    if offset is not None:  # pragma no branch
         freq = offset.freqstr
     # https://github.com/pandas-dev/pandas-stubs/pull/430
     return freq  # type: ignore[return-value]
@@ -170,7 +170,7 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
 
     if df.index.name is None:
         date_name = 'index'
-    else:
+    else:  # pragma: no cover
         date_name = df.index.name
 
     df = df.reset_index()
@@ -232,7 +232,7 @@ def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
 
     if df.index.name is None:
         date_name = 'index'
-    else:
+    else:  # pragma: no cover
         date_name = df.index.name
 
     df = df.reset_index()
