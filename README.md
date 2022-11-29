@@ -36,12 +36,16 @@ date,temp,pressure_reduced
 2022-01-01 11:40:00,4,1090
 ```
 
-1. Read in the data as a {func}`pd.DataFrame`.
-1. Create a {func}`meteo_qc.ColumnMapping` object and use the column names as
-   keys to use the method `add_group` to add the column to the group
-   (`temperature` or `pressure`). This can be an existing group or a new group.
-1. Call {func}`meteo_qc.apply_qc` to apply the control to the DataFrame
-   `data` using the `column_mapping` as a definition for the checks to be applied.
+1. Read in the data as a `pd.DataFrame`.
+1. Create a [`meteo_qc.ColumnMapping`](https://theendlessriver13.github.io/meteo-qc/meteo_qc.html#meteo_qc.ColumnMapping)
+   object and use the column names as keys to use the method `add_group` to add
+   the column to the group
+   ([`temperature`](https://theendlessriver13.github.io/meteo-qc/groups.html#temperature)
+   or [`pressure`](https://theendlessriver13.github.io/meteo-qc/groups.html#pressure)).
+   This can be an existing group or a new group.
+1. Call [`meteo_qc.apply_qc`](https://theendlessriver13.github.io/meteo-qc/meteo_qc.html#meteo_qc.apply_qc)
+   to apply the control to the DataFrame `data` using the `column_mapping` as a
+   definition for the checks to be applied.
 
 ```python
 import pandas as pd
