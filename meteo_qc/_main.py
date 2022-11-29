@@ -16,6 +16,18 @@ class ColumnResult(TypedDict):
 
 
 class FinalResult(TypedDict):
+    """
+    Final Result dictionary of the quality control.
+
+    :param columns: column that were quality controlled, mapping to a
+        dictionary of ``results`` being another dictionary mapping the check
+        function to to its Result.
+    :param passed: did the the entire quality control pass (all checks)
+    :param data_start_date: timestamp in milliseconds of the **start** date of
+        the provided input data
+    :param data_end_date: timestamp in milliseconds of the **end** date of the
+        provided input data.
+    """
     columns: dict[str, ColumnResult]
     passed: bool
     data_start_date: int
@@ -23,6 +35,64 @@ class FinalResult(TypedDict):
 
 
 def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
+    """
+    Apply the quality control to a a ``pandas.DataFrame``.
+
+    :param df: The DataFrame the quality control should be applied to
+    :param column_mapping: A column mapping (:func:`meteo_qc.ColumnMapping`),
+        that assigns groups to columns. See :func:`meteo_qc.ColumnMapping` for
+        more information on how to create and customize one.
+
+    :returns: A result as json serializable dictionary to be rendered in a
+        an HTML template.
+
+        .. code-block:: python
+
+            {
+                "columns": {
+                    {
+                        "temp": {
+                            "passed": False,
+                            "results": {
+                                "missing_timestamps": Result(
+                                    function="missing_timestamps",
+                                    passed=False,
+                                    msg="missing 1 timestamps (assumed frequency: 10T)",
+                                    data=None,
+                                ),
+                                "null_values": Result(
+                                    function="null_values",
+                                    passed=False,
+                                    msg="found 7 values that are null",
+                                    data=[
+                                        [16410348000000, None, True],
+                                        [16410384000000, None, True],
+                                        [16410420000000, None, True],
+                                        [16410456000000, None, True],
+                                        [16410492000000, None, True],
+                                        [16410528000000, None, True],
+                                        [16410564000000, None, True],
+                                    ],
+                                ),
+                                "persistence_check": Result(
+                                    function="persistence_check", passed=True, msg=None, data=None
+                                ),
+                                "range_check": Result(
+                                    function="range_check", passed=True, msg=None, data=None
+                                ),
+                                "spike_dip_check": Result(
+                                    function="spike_dip_check", passed=True, msg=None, data=None
+                                ),
+                            },
+                        },
+                    },
+                    ...
+                },
+                "data_end_date": 16410564000000,
+                "data_start_date": 16410312000000,
+                "passed": False,
+            }
+    """  # noqa: E501
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(
             f'the pandas.DataFrame index must be of type pandas.DatetimeIndex,'

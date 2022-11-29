@@ -11,6 +11,15 @@ pd.options.mode.chained_assignment = None  # type: ignore[assignment]
 
 
 def infer_freq(s: pd.Series[float]) -> str | None:
+    """Infer the frequency of a :func:`pd.DateTimeIndex` by copying the dates
+        and shifting them by one timestamp then subtracting the dates from each
+        other taking the minimum.
+
+        :param s: a :func:`pd.Series` with a :func:`pd.DateTimeIndex`.
+
+        :returns: if the series is too short (< 3) ``None`` since the frequency
+            cannot be inferred. Else a ``freqstr`` e.g. ``10T``.
+    """
     # pd.infer_freq is not working with values missing. Instead compute the
     # minimum frequency
     # shift the (sorted) index by one
@@ -81,6 +90,19 @@ def range_check(
         lower_bound: float,
         upper_bound: float,
 ) -> Result:
+    """
+    A check function checking if values in the :func:`pd.Series` `s` are within
+    a range.
+
+    This function can be used to write your own custom range checks.
+
+    :param s: the :func:`pd.Series` to be checked
+    :param lower_bound: the lower bound of the allowed values (inclusive)
+    :param upper_bound: the lower bound of the allowed values (inclusive)
+
+    :returns: a :func:`meteo_qc.Result` object containing the outcome of the
+        applied check.
+    """
     df = s.to_frame()
     df['flag'] = False
     df['flag'] = (
@@ -117,9 +139,16 @@ def range_check(
 @register('pressure', delta=0.3)
 def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     """
-    check if data has spikes or dips
+    A check function checking if values in the :func:`pd.Series` `s` have
+    sudden spikes or dips.
 
-    :param delta: maximum change per minute
+    This function can be used to write your own custom spike dip checks.
+
+    :param s: the :func:`pd.Series` to be checked
+    :param delta: maximum allowed change per minute
+
+    :returns: a :func:`meteo_qc.Result` object containing the outcome of the
+        applied check.
     """
     assert isinstance(s.index, pd.DatetimeIndex)
     freqstr = s.index.freqstr
@@ -171,7 +200,16 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
 @register('pressure', window=timedelta(hours=6))
 def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
     """
-    :param window: moving window where the value must have changed
+    A check function checking if values in the :func:`pd.Series` ``s`` are
+    persistent for a certain amount of time. "stuck values".
+
+    This function can be used to write your own custom persistence checks.
+
+    :param s: the :func:`pd.Series` to be checked
+    :param window: a timedelta after which the values must have changed
+
+    :returns: a :func:`meteo_qc.Result` object containing the outcome of the
+        applied check.
     """
     assert isinstance(s.index, pd.DatetimeIndex)
     freqstr = s.index.freqstr

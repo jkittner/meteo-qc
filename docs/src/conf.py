@@ -14,7 +14,10 @@ extensions = [
 ]
 autodoc_typehints = 'both'
 typehints_fully_qualified = True
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'pandas': ('http://pandas.pydata.org/pandas-docs/dev', None),
+}
 
 html_theme = 'furo'
 

@@ -34,6 +34,20 @@ class GroupList:
 
 
 class ColumnMapping:
+    """Class for adding columns of a dataframe to to groups. This can be done
+    by calling:
+
+    .. code-block:: python
+
+        from meteo_qc import ColumnMapping
+
+        column_mapping = ColumnMapping()
+        column_mapping['temperature_2m'].add_group('temperature')
+
+    which will add the column ``temperature_2m`` to the group
+    ``temperature`` and run all checks registered for this group.
+    """
+
     def __init__(self) -> None:
         self._dct: dict[str, GroupList] = {}
 
@@ -47,6 +61,40 @@ class ColumnMapping:
 
     @classmethod
     def autodetect_from_df(cls, df: pd.DataFrame) -> ColumnMapping:
+        """Autodetect the groups from the column names.
+
+        .. code-block:: python
+
+            import meteo_qc
+            import pandas as pd
+
+            df = pd.DataFrame(
+                data=[[10], [20]],
+                index=pd.date_range(
+                    start='2022-01-01 10:00',
+                    end='2022-01-01 10:10',
+                    freq='10T',
+                ),
+                columns=['air_temperature_2m'],
+            )
+
+            column_mapping = meteo_qc.ColumnMapping().autodetect_from_df(df)
+            print(column_mapping)
+
+        This will result in the ``air_temperature_2m`` column being registered
+        with the temperature group.
+
+        .. code-block:: console
+
+            ColumnMapping({'air_temperature_2m': GroupList(['generic', 'temperature'])})
+
+        :param df: The ``pandas.DataFrame`` to infer the groups from the column
+            names
+
+        :returns: An instance of :func:`meteo_qc.ColumnMapping` with columns
+            registered that could be inferred from the column name.
+        :rtype: :func:`meteo_qc.ColumnMapping`
+        """  # noqa: E501
         c = cls()
         groups = FUNCS
         for column in df.columns:
