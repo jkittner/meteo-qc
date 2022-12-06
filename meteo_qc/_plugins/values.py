@@ -30,8 +30,7 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     freq = None
     if offset is not None:  # pragma no branch
         freq = offset.freqstr
-    # https://github.com/pandas-dev/pandas-stubs/pull/430
-    return freq  # type: ignore[return-value]
+    return freq
 
 
 def _has_spikes_or_dip(
