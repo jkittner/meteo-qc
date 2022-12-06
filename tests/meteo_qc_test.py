@@ -1,9 +1,12 @@
+from datetime import timedelta
+
 import pandas as pd
 import pytest
 
 from meteo_qc import apply_qc
 from meteo_qc import ColumnMapping
 from meteo_qc import get_plugin_args
+from meteo_qc import persistence_check
 from meteo_qc import register
 from meteo_qc import Result
 
@@ -157,6 +160,21 @@ def test_changed_column_mapping_pressure_persistence_check(data):
     persists = results['pressure_persistent']['results']['persistence_check']
     assert persists.passed is False
     assert persists.msg == 'some values are the same for longer than 6:00:00'
+    assert persists.function == 'persistence_check'
+
+
+def test_persistence_check_with_excludes(data):
+
+    @register('custom', window=timedelta(hours=6), excludes=[10.0])
+    def custom_check(s, window, excludes):
+        return persistence_check(s=s, window=window, excludes=excludes)
+
+    column_mapping = ColumnMapping()
+    column_mapping['pressure_persistent'].add_group('custom')
+    results = apply_qc(data, column_mapping)['columns']
+    persists = results['pressure_persistent']['results']['custom_check']
+    assert persists.passed is True
+    assert persists.msg is None
     assert persists.function == 'persistence_check'
 
 

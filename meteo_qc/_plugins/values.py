@@ -57,6 +57,7 @@ def _has_spikes_or_dip(
 def _is_persistent(
         s: pd.Series[float],
         window: int,
+        excludes: list[float],
 ) -> tuple[bool, pd.DataFrame]:
     df = s.to_frame()
     df['flag'] = False
@@ -66,7 +67,7 @@ def _is_persistent(
     def _equals(x: pd.Series[float]) -> bool:
         if len(x) >= window:
             first_val = x.iloc[0]
-            return bool((x == first_val).all())
+            return bool(((x == first_val) & (~x.isin(excludes))).all())
         else:
             return False
 
@@ -197,7 +198,11 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
 @register('windspeed', window=timedelta(hours=5))
 @register('relhum', window=timedelta(hours=5))
 @register('pressure', window=timedelta(hours=6))
-def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
+def persistence_check(
+        s: pd.Series[float],
+        window: timedelta,
+        excludes: list[float] = [],
+) -> Result:
     """
     A check function checking if values in the :func:`pd.Series` ``s`` are
     persistent for a certain amount of time. "stuck values".
@@ -206,6 +211,9 @@ def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
 
     :param s: the :func:`pd.Series` to be checked
     :param window: a timedelta after which the values must have changed
+    :param excludes: values to exclude from the check e.g. useful for radiation
+        or precipitation parameters that are ``0`` during the night or ``0``
+        without precipitation
 
     :returns: a :func:`meteo_qc.Result` object containing the outcome of the
         applied check.
@@ -227,8 +235,11 @@ def persistence_check(s: pd.Series[float], window: timedelta) -> Result:
     # reindex if values are missing
     full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
     s = s.reindex(full_idx)
-    result, df = _is_persistent(s, window=timestamps_per_interval)
-
+    result, df = _is_persistent(
+        s,
+        window=timestamps_per_interval,
+        excludes=excludes,
+    )
     if df.index.name is None:
         date_name = 'index'
     else:  # pragma: no cover
