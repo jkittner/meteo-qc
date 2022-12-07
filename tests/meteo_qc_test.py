@@ -60,13 +60,17 @@ def test_generic_missing_timestamp_data_too_short():
         columns=['a', 'b'],
     )
     column_mapping = ColumnMapping()
-    results = apply_qc(df, column_mapping)['columns']
-    assert results['a']['results']['missing_timestamps'].passed is False
-    assert results['a']['results']['missing_timestamps'].msg == (
+    results = apply_qc(df, column_mapping)
+    # check timestamps of data_start_date and data_end_date
+    assert results['data_start_date'] == 1641031200000
+    assert results['data_end_date'] == 1641031800000
+    results_cols = results['columns']
+    assert results_cols['a']['results']['missing_timestamps'].passed is False
+    assert results_cols['a']['results']['missing_timestamps'].msg == (
         'cannot determine temporal resolution frequency'
     )
-    assert results['b']['results']['missing_timestamps'].passed is False
-    assert results['b']['results']['missing_timestamps'].msg == (
+    assert results_cols['b']['results']['missing_timestamps'].passed is False
+    assert results_cols['b']['results']['missing_timestamps'].msg == (
         'cannot determine temporal resolution frequency'
     )
 
@@ -237,7 +241,8 @@ def test_timestamps_are_correct(data):
     column_mapping = ColumnMapping()
     results = apply_qc(data, column_mapping)['columns']
     data = results['temp']['results']['null_values'].data
-    assert data[0][0] == 16410348000000
+    # first flagged data
+    assert data[0][0] == 1641034800000
 
 
 def test_get_plugin_args(data):

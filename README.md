@@ -82,7 +82,7 @@ nice way e.g. using an `html` template to render it.
                     function='null_values',
                     passed=False,
                     msg='found 1 values that are null',
-                    data=[[16410348000000, None, True]],
+                    data=[[1641034800000, None, True]],
                 ),
                 'range_check': Result(
                     function='range_check',
@@ -117,19 +117,19 @@ nice way e.g. using an `html` template to render it.
                     function='null_values',
                     passed=False,
                     msg='found 1 values that are null',
-                    data=[[16410342000000, None, True]],
+                    data=[[1641034200000, None, True]],
                 ),
                 'range_check': Result(
                     function='range_check',
                     passed=False,
                     msg='out of allowed range of [860 - 1055]',
-                    data=[[16410312000000, 600.0, True], [16410330000000, 1090.0, True], [16410366000000, 1090.0, True], [16410372000000, 1090.0, True]],
+                    data=[[1641031200000, 600.0, True], [1641033000000, 1090.0, True], [1641036600000, 1090.0, True], [1641037200000, 1090.0, True]],
                 ),
                 'spike_dip_check': Result(
                     function='spike_dip_check',
                     passed=False,
                     msg='spikes or dips detected. Exceeded allowed delta of 0.3 / min',
-                    data=[[16410318000000, 1024.0, True], [16410330000000, 1090.0, True], [16410342000000, None, True], [16410366000000, 1090.0, True]],
+                    data=[[1641031800000, 1024.0, True], [1641033000000, 1090.0, True], [1641034200000, None, True], [1641036600000, 1090.0, True]],
                 ),
                 'persistence_check': Result(
                     function='persistence_check',
@@ -142,8 +142,8 @@ nice way e.g. using an `html` template to render it.
         }
     }),
     'passed': False,
-    'data_start_date': 16410312000000,
-    'data_end_date': 16410372000000,
+    'data_start_date': 1641031200000,
+    'data_end_date': 1641037200000,
 }
 ```
 
