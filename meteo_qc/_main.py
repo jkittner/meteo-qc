@@ -65,13 +65,13 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
                                     passed=False,
                                     msg="found 7 values that are null",
                                     data=[
-                                        [16410348000000, None, True],
-                                        [16410384000000, None, True],
-                                        [16410420000000, None, True],
-                                        [16410456000000, None, True],
-                                        [16410492000000, None, True],
-                                        [16410528000000, None, True],
-                                        [16410564000000, None, True],
+                                        [1641034800000, None, True],
+                                        [1641038400000, None, True],
+                                        [1641042000000, None, True],
+                                        [1641045600000, None, True],
+                                        [1641049200000, None, True],
+                                        [1641052800000, None, True],
+                                        [1641056400000, None, True],
                                     ],
                                 ),
                                 "persistence_check": Result(
@@ -88,8 +88,8 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
                     },
                     ...
                 },
-                "data_end_date": 16410564000000,
-                "data_start_date": 16410312000000,
+                "data_end_date": 1641056400000,
+                "data_start_date": 1641031200000,
                 "passed": False,
             }
     """  # noqa: E501
@@ -103,8 +103,8 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
             lambda: {'results': {}, 'passed': False},
         ),
         'passed': False,
-        'data_start_date': int(df.index.min().timestamp() * 10000),
-        'data_end_date': int(df.index.max().timestamp() * 10000),
+        'data_start_date': int(df.index.min().timestamp() * 1000),
+        'data_end_date': int(df.index.max().timestamp() * 1000),
     }
     # sort the data by the DateTimeIndex
     df_sorted = df.sort_index()
