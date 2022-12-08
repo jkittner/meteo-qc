@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import tzinfo
 from typing import TypedDict
 
 import pandas as pd
@@ -98,6 +99,9 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
             f'the pandas.DataFrame index must be of type pandas.DatetimeIndex,'
             f' not {type(df.index)}',
         )
+    elif not isinstance(df.index.tzinfo, tzinfo):
+        raise TypeError('the pandas.DataFrame index must be timezone aware')
+
     final_res: FinalResult = {
         'columns': defaultdict(
             lambda: {'results': {}, 'passed': False},
