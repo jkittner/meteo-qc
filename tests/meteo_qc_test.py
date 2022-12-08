@@ -1,4 +1,5 @@
 from datetime import timedelta
+from datetime import timezone
 
 import pandas as pd
 import pytest
@@ -13,11 +14,9 @@ from meteo_qc import Result
 
 @pytest.fixture(scope='session')
 def data():
-    return pd.read_csv(
-        'testing/test_data.csv',
-        index_col='date',
-        parse_dates=True,
-    )
+    data = pd.read_csv('testing/test_data.csv')
+    data['date'] = pd.to_datetime(data['date'], utc=True)
+    return data.set_index('date')
 
 
 def test_invalid_dataframe_index():
@@ -33,7 +32,7 @@ def test_invalid_dataframe_index():
     )
 
 
-def test_generic_good_data():
+def test_invalid_dataframe_index_not_timezone_aware():
     df = pd.DataFrame(
         data=[[10, 20], [10, 20], [10, 20]],
         index=pd.date_range(
@@ -44,9 +43,59 @@ def test_generic_good_data():
         columns=['a', 'b'],
     )
     column_mapping = ColumnMapping()
+    with pytest.raises(TypeError) as exc_info:
+        apply_qc(df, column_mapping)
+
+    msg, = exc_info.value.args
+    assert msg == 'the pandas.DataFrame index must be timezone aware'
+
+
+@pytest.mark.parametrize(
+    'tz',
+    ('UTC', timezone.utc, 'Etc/GMT-1', 'Europe/Berlin'),
+)
+def test_generic_good_data_check_different_tz_definitions(tz):
+    df = pd.DataFrame(
+        data=[[10, 20], [10, 20], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:20',
+            freq='10T',
+            tz=tz,
+        ),
+        columns=['a', 'b'],
+    )
+    column_mapping = ColumnMapping()
     results = apply_qc(df, column_mapping)['columns']['a']['results']
     assert results['missing_timestamps'].passed is True
     assert results['missing_timestamps'].msg is None
+
+
+@pytest.mark.parametrize(
+    ('tz', 'start', 'end'),
+    (
+        ('UTC', 1641031200000, 1641031800000),
+        ('Etc/GMT-1', 1641027600000, 1641028200000),
+        ('Europe/Berlin', 1641027600000, 1641028200000),
+        ('America/Los_Angeles', 1641060000000, 1641060600000),
+    ),
+)
+def test_timestamps_are_always_in_utc(tz, start, end):
+    df = pd.DataFrame(
+        data=[[10, 20], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:10',
+            freq='10T',
+            tz=tz,
+        ),
+        columns=['a', 'b'],
+    )
+    column_mapping = ColumnMapping()
+    results = apply_qc(df, column_mapping)
+    # check timestamps of data_start_date and data_end_date
+    assert results['data_start_date'] == start
+    assert results['data_end_date'] == end
 
 
 def test_generic_missing_timestamp_data_too_short():
@@ -56,6 +105,7 @@ def test_generic_missing_timestamp_data_too_short():
             start='2022-01-01 10:00',
             end='2022-01-01 10:10',
             freq='10T',
+            tz='UTC',
         ),
         columns=['a', 'b'],
     )
@@ -190,6 +240,7 @@ def test_changed_column_mapping_pressure_persistence_check_data_short():
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
             freq='10T',
+            tz='UTC',
         ),
         columns=['a', 'b'],
     )
@@ -207,6 +258,7 @@ def test_changed_column_mapping_pressure_persistence_check_no_freq():
             start='2022-01-01 10:00',
             end='2022-01-01 10:10',
             freq='10T',
+            tz='UTC',
         ),
         columns=['a', 'b'],
     )
@@ -237,12 +289,32 @@ def test_stacked_decorators_persistence(data):
     assert results['temp']['passed'] is False
 
 
-def test_timestamps_are_correct(data):
+@pytest.mark.parametrize(
+    ('tz', 'first_data'),
+    (
+        ('UTC', 1641031800000),
+        ('Etc/GMT-1', 1641028200000),
+        ('Europe/Berlin', 1641028200000),
+        ('America/Los_Angeles', 1641060600000),
+    ),
+)
+def test_timestamps_are_correct_in_data_all_utc(tz, first_data):
+    df = pd.DataFrame(
+        data=[[10, 20], [10, None], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:20',
+            freq='10T',
+            tz=tz,
+        ),
+        columns=['a', 'temp'],
+    )
     column_mapping = ColumnMapping()
-    results = apply_qc(data, column_mapping)['columns']
+    results = apply_qc(df, column_mapping)['columns']
     data = results['temp']['results']['null_values'].data
+    assert data is not None
     # first flagged data
-    assert data[0][0] == 1641034800000
+    assert data[0][0] == first_data
 
 
 def test_get_plugin_args(data):
