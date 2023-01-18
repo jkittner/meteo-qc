@@ -317,6 +317,27 @@ def test_timestamps_are_correct_in_data_all_utc(tz, first_data):
     assert data[0][0] == first_data
 
 
+def test_one_minute_data_freq_can_be_inferred():
+    df = pd.DataFrame(
+        data=[[10, 20], [10, None], [10, 20]],
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 10:02',
+            freq='1T',
+            tz='UTC',
+        ),
+        columns=['a', 'temp'],
+    )
+    df.index.freq = None  # type: ignore [attr-defined]
+    column_mapping = ColumnMapping()
+    column_mapping['temp'].add_group('temperature')
+
+    results = apply_qc(df, column_mapping)['columns']
+    data = results['temp']['results']['null_values'].data
+    assert data is not None
+    assert data[0][0] == 1641031260000
+
+
 def test_get_plugin_args(data):
     args = get_plugin_args()
     # defaults are registered

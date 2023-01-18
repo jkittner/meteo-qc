@@ -30,6 +30,10 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     freq = None
     if offset is not None:  # pragma no branch
         freq = offset.freqstr
+    # pd.to_timedelta does not work with T, but needs 1T instead
+    if freq is not None and not freq[0].isdigit():
+        return f'1{freq}'
+
     return freq
 
 
