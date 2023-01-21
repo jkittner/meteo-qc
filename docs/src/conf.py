@@ -1,7 +1,7 @@
 project = 'meteo-qc'
 copyright = '2022, Jonas Kittner'
 author = 'Jonas Kittner'
-release = '0.3.1'
+release = '0.3.2'
 
 extensions = [
     'myst_parser',
