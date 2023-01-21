@@ -1,6 +1,6 @@
-[![ci](https://github.com/theendlessriver13/meteo-qc/actions/workflows/ci.yaml/badge.svg)](https://github.com/theendlessriver13/meteo-qc/actions/workflows/ci.yaml)
-[![docs](https://github.com/theendlessriver13/meteo-qc/actions/workflows/docs.yaml/badge.svg)](https://github.com/theendlessriver13/meteo-qc/actions/workflows/docs.yaml)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/theendlessriver13/meteo-qc/main.svg)](https://results.pre-commit.ci/latest/github/theendlessriver13/meteo-qc/main)
+[![ci](https://github.com/jkittner/meteo-qc/actions/workflows/ci.yaml/badge.svg)](https://github.com/jkittner/meteo-qc/actions/workflows/ci.yaml)
+[![docs](https://github.com/jkittner/meteo-qc/actions/workflows/docs.yaml/badge.svg)](https://github.com/jkittner/meteo-qc/actions/workflows/docs.yaml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/jkittner/meteo-qc/main.svg)](https://results.pre-commit.ci/latest/github/jkittner/meteo-qc/main)
 
 # meteo-qc
 
@@ -17,7 +17,7 @@ pip install meteo-qc
 
 ## Getting started
 
-Check out the [Documentation](https://theendlessriver13.github.io/meteo-qc) for
+Check out the [Documentation](https://jkittner.github.io/meteo-qc) for
 detailed information.
 
 Apply the quality control to this csv data called `test_data.csv`:
@@ -37,13 +37,13 @@ date,temp,pressure_reduced
 ```
 
 1. Read in the data as a `pd.DataFrame`.
-1. Create a [`meteo_qc.ColumnMapping`](https://theendlessriver13.github.io/meteo-qc/meteo_qc.html#meteo_qc.ColumnMapping)
+1. Create a [`meteo_qc.ColumnMapping`](https://jkittner.github.io/meteo-qc/meteo_qc.html#meteo_qc.ColumnMapping)
    object and use the column names as keys to use the method `add_group` to add
    the column to the group
-   ([`temperature`](https://theendlessriver13.github.io/meteo-qc/groups.html#temperature)
-   or [`pressure`](https://theendlessriver13.github.io/meteo-qc/groups.html#pressure)).
+   ([`temperature`](https://jkittner.github.io/meteo-qc/groups.html#temperature)
+   or [`pressure`](https://jkittner.github.io/meteo-qc/groups.html#pressure)).
    This can be an existing group or a new group.
-1. Call [`meteo_qc.apply_qc`](https://theendlessriver13.github.io/meteo-qc/meteo_qc.html#meteo_qc.apply_qc)
+1. Call [`meteo_qc.apply_qc`](https://jkittner.github.io/meteo-qc/meteo_qc.html#meteo_qc.apply_qc)
    to apply the control to the DataFrame `data` using the `column_mapping` as a
    definition for the checks to be applied.
 
@@ -148,6 +148,6 @@ nice way e.g. using an `html` template to render it.
 ```
 
 It is also possible to write and register your own functions if they are not
-already in the predefined [Groups](https://theendlessriver13.github.io/meteo-qc/groups.html).
-Please check out the [Docs](https://theendlessriver13.github.io/meteo-qc) for
+already in the predefined [Groups](https://jkittner.github.io/meteo-qc/groups.html).
+Please check out the [Docs](https://jkittner.github.io/meteo-qc) for
 more information.
