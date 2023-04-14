@@ -17,9 +17,29 @@ def missing_timestamps(s: pd.Series[float]) -> Result:
             passed=False,
             msg='cannot determine temporal resolution frequency',
         )
-    full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freq)
+
+    df = s.to_frame()
+    if df.index.name is None:
+        date_name = 'index'
+    else:
+        date_name = df.index.name
+
+    full_idx = pd.date_range(
+        df.index.min(),
+        df.index.max(),
+        freq=freq,
+        name=date_name,
+    )
 
     nr_missing = len(full_idx) - len(s.index)
+    # get the rows that were missing
+    timestamps_missing = full_idx.difference(s.index)
+
+    df = df.reindex(full_idx).loc[timestamps_missing].reset_index()
+    # timestamp to milliseconds
+    df[date_name] = df[date_name].astype(int) // 1000000
+    # replace NaNs with NULLs, since json tokenizing can't handle them
+    df = df.replace([float('nan')], [None])
     if nr_missing > 0:
         return Result(
             function=missing_timestamps.__name__,
@@ -27,6 +47,7 @@ def missing_timestamps(s: pd.Series[float]) -> Result:
             msg=(
                 f'missing {nr_missing} timestamps (assumed frequency: {freq})'
             ),
+            data=df.values.tolist(),
         )
     else:
         return Result(function=missing_timestamps.__name__, passed=True)
