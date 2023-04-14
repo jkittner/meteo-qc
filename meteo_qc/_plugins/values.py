@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import timedelta
 
 import pandas as pd
@@ -46,15 +47,24 @@ def _has_spikes_or_dip(
     def _compare(s: pd.Series[float]) -> bool:
         if len(s) == 1:
             return False
-        return bool(abs(s[0] - s[1]) > delta)
+
+        diff = abs(s[0] - s[1])
+        if math.isnan(diff):
+            return False
+
+        return bool(diff > delta)
 
     df['flag'] = df.rolling(
         window=2,
         min_periods=1,
         closed='right',
-    ).apply(_compare).astype(bool)
+    ).apply(_compare)
+    # if there are not enough valid obervations, rolling returns NaN.
+    # Converting this to a bool results in True sind float('nan') is truthy
+    # set all NaN to False, since we don't want to flag them here
+    df['flag'] = df['flag'].replace([float('nan')], [0.0]).astype(bool)
     # TODO: also return where, and make sure the spike or dip is labelled
-    # correctly
+    # correctly with surroundings, maybe an additional rolling?
     data: pd.DataFrame = df[df['flag'] == True]  # type: ignore[assignment] # noqa: E712,E501
     return bool(df['flag'].any()), data
 

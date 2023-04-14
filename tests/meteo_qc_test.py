@@ -183,6 +183,12 @@ def test_changed_column_mapping_pressure_checks(data):
     assert pressure_spike.msg == (
         'spikes or dips detected. Exceeded allowed delta of 0.3 / min'
     )
+    assert pressure_spike.data is not None
+    # missing values are also detected as spikes/dips
+    timestamps = [i[0] for i in pressure_spike.data]
+    # both have NaN vals and appear after each other,so must not be flagged!
+    assert 1641033600000 not in timestamps
+    assert 1641034200000 not in timestamps
 
 
 def test_can_register_new_check(data):
