@@ -55,7 +55,8 @@ def _has_spikes_or_dip(
     ).apply(_compare).astype(bool)
     # TODO: also return where, and make sure the spike or dip is labelled
     # correctly
-    return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
+    data: pd.DataFrame = df[df['flag'] == True]  # type: ignore[assignment] # noqa: E712,E501
+    return bool(df['flag'].any()), data
 
 
 def _is_persistent(
@@ -66,7 +67,7 @@ def _is_persistent(
     df = s.to_frame()
     df['flag'] = False
     if len(df) <= window:
-        return False, df[df['flag'] == True]  # noqa: E712
+        return False, df[df['flag'] == True]  # type: ignore[return-value] # noqa: E712,E501
 
     def _equals(x: pd.Series[float]) -> bool:
         if len(x) >= window:
@@ -80,7 +81,8 @@ def _is_persistent(
         min_periods=1,
         closed='right',
     ).apply(_equals).astype(bool)
-    return bool(df['flag'].any()), df[df['flag'] == True]  # noqa: E712
+    data: pd.DataFrame = df[df['flag'] == True]  # type: ignore[assignment] # noqa: E712,E501
+    return bool(df['flag'].any()), data
 
 
 @register('temperature', lower_bound=-40, upper_bound=50)

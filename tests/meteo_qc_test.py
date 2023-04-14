@@ -125,8 +125,10 @@ def test_generic_missing_timestamp_data_too_short():
     )
 
 
-def test_generic_checks_are_applied_as_default(data):
+@pytest.mark.parametrize('idx_name', (None, 'date'))
+def test_generic_checks_are_applied_as_default(data, idx_name):
     column_mapping = ColumnMapping()
+    data.index.name = idx_name
     results = apply_qc(data, column_mapping)
     for col in results['columns']:
         assert set(results['columns'][col]['results'].keys()) == {
@@ -143,11 +145,14 @@ def test_generic_checks_are_applied_as_default(data):
     assert pressure_res['missing_timestamps'].msg == (
         'missing 1 timestamps (assumed frequency: 10T)'
     )
+    assert pressure_res['missing_timestamps'].data == [[1641033600000, None]]
     assert temp_res['missing_timestamps'].passed is False
     assert temp_res['missing_timestamps'].function == 'missing_timestamps'
     assert temp_res['missing_timestamps'].msg == (
         'missing 1 timestamps (assumed frequency: 10T)'
     )
+    assert temp_res['missing_timestamps'].data == [[1641033600000, None]]
+
     # null values are detected
     assert pressure_res['null_values'].passed is False
     assert pressure_res['null_values'].function == 'null_values'

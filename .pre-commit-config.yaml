@@ -51,7 +51,7 @@ repos:
     hooks:
     -   id: setup-cfg-fmt
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.1
+    rev: v1.2.0
     hooks:
     -   id: mypy
-        additional_dependencies: [pandas-stubs==1.5.2.221124]
+        additional_dependencies: [pandas-stubs==2.0.0.230412]
