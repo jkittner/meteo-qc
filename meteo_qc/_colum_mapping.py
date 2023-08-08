@@ -23,11 +23,12 @@ class GroupList:
     def __eq__(self, __o: object) -> bool:
         return __o == self._lst
 
-    def add_group(self, v: str) -> None:
-        if v in FUNCS:
-            self._lst.append(v)
+    def add_group(self, group: str) -> None:
+        if group in FUNCS:
+            if group not in self._lst:
+                self._lst.append(group)
         else:
-            raise KeyError(f'unregistered group: {v!r}')
+            raise KeyError(f'unregistered group: {group!r}')
 
     def __repr__(self) -> str:
         return f'{type(self).__name__}({self._lst})'

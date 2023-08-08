@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import pkgutil
 from collections import defaultdict
+from functools import cached_property
 from typing import Any
 from typing import Callable
+from typing import Literal
 from typing import NamedTuple
+from typing import overload
 from typing import TypedDict
+
+import pandas as pd
 
 from meteo_qc import _plugins
 
@@ -26,15 +31,81 @@ class Result(NamedTuple):
 
 
 # TODO: this needs the series and variable number of kwargs
-FUNC_T = Callable[..., Result]
+# FUNC_T = Callable[..., Result]
 
 
 class FunctionInfo(TypedDict):
-    func: FUNC_T
+    func: PluginBase
     kwargs: dict[str, Any]
 
 
 FUNCS: dict[str, list[FunctionInfo]] = defaultdict(list)
+
+
+class PluginBase:
+    @overload
+    def __call__(
+            self,
+            s: pd.Series[float],
+            as_df: Literal[False] = False,
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result:
+        ...
+
+    @overload
+    def __call__(
+            self,
+            s: pd.Series[float],
+            as_df: Literal[True],
+            *args: Any,
+            **kwargs: Any,
+    ) -> pd.DataFrame:
+        ...
+
+    def __call__(
+            self,
+            s: pd.Series[float],
+            as_df: bool = False,
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result | pd.DataFrame:
+        self.s = s
+
+        if as_df:
+            return self.as_df(s, *args, **kwargs)
+        else:
+            return self.as_result(s, *args, **kwargs)
+
+    def as_df(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> pd.DataFrame:
+        raise NotImplementedError(
+            f'{self.as_df!r} needs to be implemented to work with as_df=True',
+        )
+
+    def as_result(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result:
+        raise NotImplementedError(
+            f'{self.as_df!r} needs to be implemented to work with as_df=False',
+        )
+
+    @cached_property
+    def name(self) -> str:
+        name = type(self).__name__[0].lower()
+        for i in type(self).__name__[1:]:
+            if i.isupper():
+                name += f'_{i.lower()}'
+            else:
+                name += i
+        return name
 
 
 def get_plugin_args() -> dict[str, dict[str, dict[str, Any]]]:
@@ -80,11 +151,14 @@ def get_plugin_args() -> dict[str, dict[str, dict[str, Any]]]:
     """
     args = {}
     for group in FUNCS:
-        args[group] = {i['func'].__name__: i['kwargs'] for i in FUNCS[group]}
+        args[group] = {i['func'].name: i['kwargs'] for i in FUNCS[group]}
     return args
 
 
-def register(group: str, **kwargs: Any) -> Callable[[FUNC_T], FUNC_T]:
+def register(
+        group: str,
+        **kwargs: Any,
+) -> Callable[[type[PluginBase]], type[PluginBase]]:
     """
     A decorator for registering a plugin function.
 
@@ -93,7 +167,7 @@ def register(group: str, **kwargs: Any) -> Callable[[FUNC_T], FUNC_T]:
         import meteo_qc
 
 
-        @meteo_qc.register('temperature', args1=5, pi=3.141)
+        @meteo_qc.register('temperature', arg1=5, pi=3.141)
         def custom_check(s: pd.DataFrame, arg1: int, pi: float) -> meteo_qc.Result:
             ...
 
@@ -124,8 +198,9 @@ def register(group: str, **kwargs: Any) -> Callable[[FUNC_T], FUNC_T]:
     :param kwargs: The keyword arguments that are associated with function that
         is decorated. For an example see above.
     """  # noqa: E501
-    def register_decorator(func: FUNC_T) -> FUNC_T:
-        func_info = FunctionInfo(func=func, kwargs=kwargs)
+    def register_decorator(func: type[PluginBase]) -> type[PluginBase]:
+        f = func()
+        func_info = FunctionInfo(func=f, kwargs=kwargs)
         FUNCS[group].append(func_info)
         return func
     return register_decorator

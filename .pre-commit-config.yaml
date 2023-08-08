@@ -54,4 +54,4 @@ repos:
     rev: v1.4.1
     hooks:
     -   id: mypy
-        additional_dependencies: [pandas-stubs==2.0.0.230412]
+        additional_dependencies: [pandas-stubs==2.0.2.230605]

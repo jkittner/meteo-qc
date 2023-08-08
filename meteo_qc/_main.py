@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import tzinfo
+from typing import Literal
+from typing import overload
 from typing import TypedDict
 
 import pandas as pd
@@ -35,7 +37,27 @@ class FinalResult(TypedDict):
     data_end_date: int
 
 
-def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
+@overload
+def apply_qc(
+        df: pd.DataFrame, column_mapping: ColumnMapping,
+        as_df: Literal[False] = False,
+) -> FinalResult:
+    ...
+
+
+@overload
+def apply_qc(
+        df: pd.DataFrame, column_mapping: ColumnMapping,
+        as_df: Literal[True],
+) -> pd.DataFrame:
+    ...
+
+
+def apply_qc(
+        df: pd.DataFrame,
+        column_mapping: ColumnMapping,
+        as_df: bool = False,
+) -> FinalResult | pd.DataFrame:
     """
     Apply the quality control to a a ``pandas.DataFrame``.
 
@@ -112,20 +134,51 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
     }
     # sort the data by the DateTimeIndex
     df_sorted = df.sort_index()
+    df_out = pd.DataFrame()
     for column in df_sorted.columns:
         # all groups associated with this column
         qc_types = column_mapping[column]
         final_res_col = final_res['columns'][column]
         for qc_type in qc_types:
             # all functions registered for this group
-            registerd_funcs = FUNCS[qc_type]
-            for func in registerd_funcs:
-                call_result = func['func'](df_sorted[column], **func['kwargs'])
-                final_res_col['results'][func['func'].__name__] = call_result
-        # check if entire column passed
-        final_res_col['passed'] = all(
-            [i.passed for i in final_res_col['results'].values()],
-        )
+            registered_funcs = FUNCS[qc_type]
+            for func in registered_funcs:
+                if as_df is True:
+                    call_df = func['func'](
+                        s=df_sorted[column],
+                        as_df=as_df,
+                        **func['kwargs'],
+                    )
+                    dupes = set(call_df.columns).intersection(
+                        set(df_out.columns),
+                    )
+                    # new value!
+                    if len(dupes) == 0:
+                        df_out = pd.concat([df_out, call_df], axis=1)
+                    # we have the value already, but can extend
+                    elif len(dupes) == 1:
+                        df_out.loc[
+                            :, (column, func['func'].name),
+                        ] = call_df[column][func['func'].name]
+                    # the check was already performed?
+                    else:
+                        continue
+                else:
+                    call_result = func['func'](
+                        s=df_sorted[column],
+                        as_df=as_df,
+                        **func['kwargs'],
+                    )
+                    final_res_col['results'][func['func'].name] = call_result  # noqa: E501
+
+        if as_df is False:
+            # check if entire column passed
+            final_res_col['passed'] = all(
+                [i.passed for i in final_res_col['results'].values()],
+            )
+    if as_df is True:
+        return df_out
+
     # check if the entire QC failed
     final_res['passed'] = all(
         [i['passed'] for i in final_res['columns'].values()],

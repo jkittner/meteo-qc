@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from datetime import timedelta
 from datetime import timezone
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -7,7 +10,8 @@ import pytest
 from meteo_qc import apply_qc
 from meteo_qc import ColumnMapping
 from meteo_qc import get_plugin_args
-from meteo_qc import persistence_check
+from meteo_qc import PersistenceCheck
+from meteo_qc import PluginBase
 from meteo_qc import register
 from meteo_qc import Result
 
@@ -74,18 +78,18 @@ def test_generic_good_data_check_different_tz_definitions(tz):
 @pytest.mark.parametrize(
     ('tz', 'start', 'end'),
     (
-        ('UTC', 1641031200000, 1641031800000),
-        ('Etc/GMT-1', 1641027600000, 1641028200000),
-        ('Europe/Berlin', 1641027600000, 1641028200000),
-        ('America/Los_Angeles', 1641060000000, 1641060600000),
+        ('UTC', 1641031200000, 1641032400000),
+        ('Etc/GMT-1', 1641027600000, 1641028800000),
+        ('Europe/Berlin', 1641027600000, 1641028800000),
+        ('America/Los_Angeles', 1641060000000, 1641061200000),
     ),
 )
 def test_timestamps_are_always_in_utc(tz, start, end):
     df = pd.DataFrame(
-        data=[[10, 20], [10, 20]],
+        data=[[10, 20], [10, 20], [10, 30]],
         index=pd.date_range(
             start='2022-01-01 10:00',
-            end='2022-01-01 10:10',
+            end='2022-01-01 10:20',
             freq='10T',
             tz=tz,
         ),
@@ -110,19 +114,11 @@ def test_generic_missing_timestamp_data_too_short():
         columns=['a', 'b'],
     )
     column_mapping = ColumnMapping()
-    results = apply_qc(df, column_mapping)
-    # check timestamps of data_start_date and data_end_date
-    assert results['data_start_date'] == 1641031200000
-    assert results['data_end_date'] == 1641031800000
-    results_cols = results['columns']
-    assert results_cols['a']['results']['missing_timestamps'].passed is False
-    assert results_cols['a']['results']['missing_timestamps'].msg == (
-        'cannot determine temporal resolution frequency'
-    )
-    assert results_cols['b']['results']['missing_timestamps'].passed is False
-    assert results_cols['b']['results']['missing_timestamps'].msg == (
-        'cannot determine temporal resolution frequency'
-    )
+    with pytest.raises(ValueError) as exc_info:
+        apply_qc(df, column_mapping)
+
+    msg, = exc_info.value.args
+    assert msg == 'cannot determine temporal resolution frequency'
 
 
 @pytest.mark.parametrize('idx_name', (None, 'date'))
@@ -193,28 +189,34 @@ def test_changed_column_mapping_pressure_checks(data):
 
 def test_can_register_new_check(data):
     @register('generic')
-    def over_1000(s):
-        ret = bool(s.max() > 1000)
-        if ret is True:
-            return Result(
-                over_1000.__name__,
-                passed=False,
-                msg='over 1000!',
-            )
-        else:
-            return Result(over_1000.__name__, passed=True)
+    class Over1000(PluginBase):
+        def as_result(
+                self,
+                s: pd.Series[float],
+                *args: Any,
+                **kwargs: Any,
+        ) -> Result:
+            ret = bool(s.max() > 1000)
+            if ret is True:
+                return Result(
+                    self.name,
+                    passed=False,
+                    msg='over 1000!',
+                )
+            else:
+                return Result(self.name, passed=True)
 
     column_mapping = ColumnMapping()
     results = apply_qc(data, column_mapping)['columns']
-    pressure_result = results['pressure_reduced']['results']['over_1000']
-    temp_result = results['temp']['results']['over_1000']
+    pressure_result = results['pressure_reduced']['results']['over1000']
+    temp_result = results['temp']['results']['over1000']
 
     assert pressure_result.passed is False
-    assert pressure_result.function == 'over_1000'
+    assert pressure_result.function == 'over1000'
     assert pressure_result.msg == 'over 1000!'
 
     assert temp_result.passed is True
-    assert temp_result.function == 'over_1000'
+    assert temp_result.function == 'over1000'
     assert temp_result.msg is None
 
 
@@ -231,8 +233,15 @@ def test_changed_column_mapping_pressure_persistence_check(data):
 def test_persistence_check_with_excludes(data):
 
     @register('custom', window=timedelta(hours=6), excludes=[10.0])
-    def custom_check(s, window, excludes):
-        return persistence_check(s=s, window=window, excludes=excludes)
+    class CustomCheck(PluginBase):
+        def as_result(
+                self,
+                s: pd.Series[float],
+                *args: Any,
+                **kwargs: Any,
+        ) -> Result:
+            p = PersistenceCheck()
+            return p(s=s, window=kwargs['window'], excludes=kwargs['excludes'])
 
     column_mapping = ColumnMapping()
     column_mapping['pressure_persistent'].add_group('custom')
@@ -259,28 +268,6 @@ def test_changed_column_mapping_pressure_persistence_check_data_short():
     results = apply_qc(df, column_mapping)['columns']
     persists = results['a']['results']['persistence_check']
     assert persists.passed is True
-
-
-def test_changed_column_mapping_pressure_persistence_check_no_freq():
-    column_mapping = ColumnMapping()
-    df = pd.DataFrame(
-        data=[[10, 20], [10, 20]],
-        index=pd.date_range(
-            start='2022-01-01 10:00',
-            end='2022-01-01 10:10',
-            freq='10T',
-            tz='UTC',
-        ),
-        columns=['a', 'b'],
-    )
-    assert isinstance(df.index, pd.DatetimeIndex)
-    df.index.freq = None  # type: ignore [misc]
-    column_mapping['a'].add_group('pressure')
-    results = apply_qc(df, column_mapping)['columns']
-    persists = results['a']['results']['persistence_check']
-    assert persists.passed is False
-    assert persists.function == 'persistence_check'
-    assert persists.msg == 'cannot determine temporal resolution frequency'
 
 
 def test_stacked_decorators_persistence(data):

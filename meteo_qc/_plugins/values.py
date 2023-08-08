@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import math
 from datetime import timedelta
+from typing import Any
 
 import pandas as pd
 
+from meteo_qc._data import PluginBase
 from meteo_qc._data import register
 from meteo_qc._data import Result
 
@@ -101,11 +103,7 @@ def _is_persistent(
 @register('windspeed', lower_bound=0, upper_bound=30)
 @register('winddirection', lower_bound=0, upper_bound=360)
 @register('pressure', lower_bound=860, upper_bound=1055)
-def range_check(
-        s: pd.Series[float],
-        lower_bound: float,
-        upper_bound: float,
-) -> Result:
+class RangeCheck(PluginBase):
     """
     A check function checking if values in the :func:`pd.Series` `s` are within
     a range.
@@ -119,41 +117,65 @@ def range_check(
     :returns: a :func:`meteo_qc.Result` object containing the outcome of the
         applied check.
     """
-    df = s.to_frame()
-    df['flag'] = False
-    df['flag'] = (
-        df.iloc[:, 0].lt(lower_bound) |
-        df.iloc[:, 0].gt(upper_bound)
-    )
 
-    if df.index.name is None:
-        date_name = 'index'
-    else:
-        date_name = df.index.name
-
-    df = df.reset_index()
-    # we need something json serializable
-    # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
-    # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
-    result = bool(df['flag'].any())
-    if result is True:
-        return Result(
-            function=range_check.__name__,
-            passed=False,
-            msg=f'out of allowed range of [{lower_bound} - {upper_bound}]',
-            data=df[df['flag'] == True].values.tolist(),  # noqa: E712
+    def as_df(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> pd.DataFrame:
+        df = s.to_frame()
+        df['flag'] = False
+        df['flag'] = (
+            df.iloc[:, 0].lt(kwargs['lower_bound']) |
+            df.iloc[:, 0].gt(kwargs['upper_bound'])
         )
-    else:
-        return Result(function=range_check.__name__, passed=True)
+        return df
+
+    def as_result(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result:
+        df = s.to_frame()
+        df['flag'] = False
+        df['flag'] = (
+            df.iloc[:, 0].lt(kwargs['lower_bound']) |
+            df.iloc[:, 0].gt(kwargs['upper_bound'])
+        )
+
+        if df.index.name is None:
+            date_name = 'index'
+        else:
+            date_name = df.index.name
+
+        df = df.reset_index()
+        # we need something json serializable
+        # timestamp to milliseconds
+        df[date_name] = df[date_name].astype(int) // 1000000
+        # replace NaNs with NULLs, since json tokenizing can't handle them
+        df = df.replace([float('nan')], [None])
+        result = bool(df['flag'].any())
+        if result is True:
+            return Result(
+                function=self.name,
+                passed=False,
+                msg=(
+                    f'out of allowed range of '
+                    f'[{kwargs["lower_bound"]} - {kwargs["upper_bound"]}]'
+                ),
+                data=df[df['flag'] == True].values.tolist(),  # noqa: E712
+            )
+        else:
+            return Result(function=self.name, passed=True)
 
 
 @register('temperature', delta=0.3)
 @register('dew_point', delta=0.3)
 @register('relhum', delta=4)
 @register('pressure', delta=0.3)
-def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
+class SpikeDipCheck(PluginBase):
     """
     A check function checking if values in the :func:`pd.Series` `s` have
     sudden spikes or dips.
@@ -166,47 +188,54 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     :returns: a :func:`meteo_qc.Result` object containing the outcome of the
         applied check.
     """
-    assert isinstance(s.index, pd.DatetimeIndex)
-    freqstr = s.index.freqstr
-    if freqstr is None:
-        freqstr = infer_freq(s)
+
+    def as_result(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result:
+        assert isinstance(s.index, pd.DatetimeIndex)
+        freqstr = s.index.freqstr
         if freqstr is None:
+            freqstr = infer_freq(s)
+            if freqstr is None:
+                return Result(
+                    function=self.name,
+                    passed=False,
+                    msg='cannot determine temporal resolution frequency',
+                )
+
+        freq_delta = pd.to_timedelta(freqstr)
+        _delta = (freq_delta.total_seconds() / 60) * kwargs['delta']
+        # reindex if values are missing
+        full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
+        s = s.reindex(full_idx)
+        result, df = _has_spikes_or_dip(s, delta=_delta)
+
+        if df.index.name is None:
+            date_name = 'index'
+        else:  # pragma: no cover
+            date_name = df.index.name
+
+        df = df.reset_index()
+        # we need something json serializable
+        # timestamp to milliseconds
+        df[date_name] = df[date_name].astype(int) // 1000000
+        # replace NaNs with NULLs, since json tokenizing can't handle them
+        df = df.replace([float('nan')], [None])
+        if result is True:
             return Result(
-                function=spike_dip_check.__name__,
+                function=self.name,
                 passed=False,
-                msg='cannot determine temporal resolution frequency',
+                msg=(
+                    f'spikes or dips detected. Exceeded allowed delta of '
+                    f'{kwargs["delta"]} / min'
+                ),
+                data=df.values.tolist(),
             )
-
-    freq_delta = pd.to_timedelta(freqstr)
-    _delta = (freq_delta.total_seconds() / 60) * delta
-    # reindex if values are missing
-    full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
-    s = s.reindex(full_idx)
-    result, df = _has_spikes_or_dip(s, delta=_delta)
-
-    if df.index.name is None:
-        date_name = 'index'
-    else:  # pragma: no cover
-        date_name = df.index.name
-
-    df = df.reset_index()
-    # we need something json serializable
-    # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
-    # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
-    if result is True:
-        return Result(
-            function=spike_dip_check.__name__,
-            passed=False,
-            msg=(
-                f'spikes or dips detected. Exceeded allowed delta of '
-                f'{delta} / min'
-            ),
-            data=df.values.tolist(),
-        )
-    else:
-        return Result(function=spike_dip_check.__name__, passed=True)
+        else:
+            return Result(function=self.name, passed=True)
 
 
 @register('temperature', window=timedelta(hours=2))
@@ -214,11 +243,7 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
 @register('windspeed', window=timedelta(hours=5))
 @register('relhum', window=timedelta(hours=5))
 @register('pressure', window=timedelta(hours=6))
-def persistence_check(
-        s: pd.Series[float],
-        window: timedelta,
-        excludes: list[float] = [],
-) -> Result:
+class PersistenceCheck(PluginBase):
     """
     A check function checking if values in the :func:`pd.Series` ``s`` are
     persistent for a certain amount of time. "stuck values".
@@ -234,45 +259,52 @@ def persistence_check(
     :returns: a :func:`meteo_qc.Result` object containing the outcome of the
         applied check.
     """
-    assert isinstance(s.index, pd.DatetimeIndex)
-    freqstr = s.index.freqstr
-    if freqstr is None:
-        freqstr = infer_freq(s)
+
+    def as_result(
+            self,
+            s: pd.Series[float],
+            *args: Any,
+            **kwargs: Any,
+    ) -> Result:
+        assert isinstance(s.index, pd.DatetimeIndex)
+        freqstr = s.index.freqstr
         if freqstr is None:
-            return Result(
-                function=persistence_check.__name__,
-                passed=False,
-                msg='cannot determine temporal resolution frequency',
-            )
+            freqstr = infer_freq(s)
+            if freqstr is None:
+                return Result(
+                    function=self.name,
+                    passed=False,
+                    msg='cannot determine temporal resolution frequency',
+                )
 
-    freq_delta = pd.to_timedelta(freqstr)
-    timestamps_per_interval = window // freq_delta
+        freq_delta = pd.to_timedelta(freqstr)
+        timestamps_per_interval = kwargs['window'] // freq_delta
 
-    # reindex if values are missing
-    full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
-    s = s.reindex(full_idx)
-    result, df = _is_persistent(
-        s,
-        window=timestamps_per_interval,
-        excludes=excludes,
-    )
-    if df.index.name is None:
-        date_name = 'index'
-    else:  # pragma: no cover
-        date_name = df.index.name
-
-    df = df.reset_index()
-    # we need something json serializable
-    # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
-    # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
-    if result is True:
-        return Result(
-            function=persistence_check.__name__,
-            passed=False,
-            msg=f'some values are the same for longer than {window}',
-            data=df.values.tolist(),
+        # reindex if values are missing
+        full_idx = pd.date_range(s.index.min(), s.index.max(), freq=freqstr)
+        s = s.reindex(full_idx)
+        result, df = _is_persistent(
+            s,
+            window=timestamps_per_interval,
+            excludes=kwargs.get('excludes', []),
         )
-    else:
-        return Result(function=persistence_check.__name__, passed=True)
+        if df.index.name is None:
+            date_name = 'index'
+        else:  # pragma: no cover
+            date_name = df.index.name
+
+        df = df.reset_index()
+        # we need something json serializable
+        # timestamp to milliseconds
+        df[date_name] = df[date_name].astype(int) // 1000000
+        # replace NaNs with NULLs, since json tokenizing can't handle them
+        df = df.replace([float('nan')], [None])
+        if result is True:
+            return Result(
+                function=self.name,
+                passed=False,
+                msg=f'some values are the same for longer than {kwargs["window"]}',  # noqa: E501
+                data=df.values.tolist(),
+            )
+        else:
+            return Result(function=self.name, passed=True)
