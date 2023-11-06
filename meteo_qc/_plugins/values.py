@@ -48,7 +48,7 @@ def _has_spikes_or_dip(
         if len(s) == 1:
             return False
 
-        diff = abs(s[0] - s[1])
+        diff = abs(s.iloc[0] - s.iloc[1])
         if math.isnan(diff):
             return False
 
