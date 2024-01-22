@@ -58,7 +58,7 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
                                 "missing_timestamps": Result(
                                     function="missing_timestamps",
                                     passed=False,
-                                    msg="missing 1 timestamps (assumed frequency: 10T)",
+                                    msg="missing 1 timestamps (assumed frequency: 10min)",
                                     data=None,
                                 ),
                                 "null_values": Result(

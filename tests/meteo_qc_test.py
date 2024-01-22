@@ -38,7 +38,7 @@ def test_invalid_dataframe_index_not_timezone_aware():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
-            freq='10T',
+            freq='10min',
         ),
         columns=['a', 'b'],
     )
@@ -60,7 +60,7 @@ def test_generic_good_data_check_different_tz_definitions(tz):
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
-            freq='10T',
+            freq='10min',
             tz=tz,
         ),
         columns=['a', 'b'],
@@ -86,7 +86,7 @@ def test_timestamps_are_always_in_utc(tz, start, end):
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:10',
-            freq='10T',
+            freq='10min',
             tz=tz,
         ),
         columns=['a', 'b'],
@@ -104,7 +104,7 @@ def test_generic_missing_timestamp_data_too_short():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:10',
-            freq='10T',
+            freq='10min',
             tz='UTC',
         ),
         columns=['a', 'b'],
@@ -143,13 +143,13 @@ def test_generic_checks_are_applied_as_default(data, idx_name):
     assert pressure_res['missing_timestamps'].passed is False
     assert pressure_res['missing_timestamps'].function == 'missing_timestamps'
     assert pressure_res['missing_timestamps'].msg == (
-        'missing 1 timestamps (assumed frequency: 10T)'
+        'missing 1 timestamps (assumed frequency: 10min)'
     )
     assert pressure_res['missing_timestamps'].data == [[1641033600000, None]]
     assert temp_res['missing_timestamps'].passed is False
     assert temp_res['missing_timestamps'].function == 'missing_timestamps'
     assert temp_res['missing_timestamps'].msg == (
-        'missing 1 timestamps (assumed frequency: 10T)'
+        'missing 1 timestamps (assumed frequency: 10min)'
     )
     assert temp_res['missing_timestamps'].data == [[1641033600000, None]]
 
@@ -250,7 +250,7 @@ def test_changed_column_mapping_pressure_persistence_check_data_short():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
-            freq='10T',
+            freq='10min',
             tz='UTC',
         ),
         columns=['a', 'b'],
@@ -268,7 +268,7 @@ def test_changed_column_mapping_pressure_persistence_check_no_freq():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:10',
-            freq='10T',
+            freq='10min',
             tz='UTC',
         ),
         columns=['a', 'b'],
@@ -315,7 +315,7 @@ def test_timestamps_are_correct_in_data_all_utc(tz, first_data):
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
-            freq='10T',
+            freq='10min',
             tz=tz,
         ),
         columns=['a', 'temp'],
@@ -334,7 +334,7 @@ def test_one_minute_data_freq_can_be_inferred():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:02',
-            freq='1T',
+            freq='1min',
             tz='UTC',
         ),
         columns=['a', 'temp'],

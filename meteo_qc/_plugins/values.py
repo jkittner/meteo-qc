@@ -19,7 +19,7 @@ def infer_freq(s: pd.Series[float]) -> str | None:
         :param s: a :func:`pd.Series` with a :func:`pd.DateTimeIndex`.
 
         :returns: if the series is too short (< 3) ``None`` since the frequency
-            cannot be inferred. Else a ``freqstr`` e.g. ``10T``.
+            cannot be inferred. Else a ``freqstr`` e.g. ``10min``.
     """
     # pd.infer_freq is not working with values missing. Instead compute the
     # minimum frequency
@@ -31,7 +31,7 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     freq = None
     if offset is not None:  # pragma no branch
         freq = offset.freqstr
-    # pd.to_timedelta does not work with T, but needs 1T instead
+    # pd.to_timedelta does not work with min, but needs 1min instead
     if freq is not None and not freq[0].isdigit():
         return f'1{freq}'
 
