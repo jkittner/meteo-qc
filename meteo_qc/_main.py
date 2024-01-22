@@ -124,11 +124,11 @@ def apply_qc(df: pd.DataFrame, column_mapping: ColumnMapping) -> FinalResult:
                 final_res_col['results'][func['func'].__name__] = call_result
         # check if entire column passed
         final_res_col['passed'] = all(
-            [i.passed for i in final_res_col['results'].values()],
+            (i.passed for i in final_res_col['results'].values()),
         )
     # check if the entire QC failed
     final_res['passed'] = all(
-        [i['passed'] for i in final_res['columns'].values()],
+        (i['passed'] for i in final_res['columns'].values()),
     )
 
     return final_res

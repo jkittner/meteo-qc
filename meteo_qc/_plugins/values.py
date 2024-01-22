@@ -8,7 +8,7 @@ import pandas as pd
 from meteo_qc._data import register
 from meteo_qc._data import Result
 
-pd.options.mode.chained_assignment = None  # type: ignore[assignment]
+pd.options.mode.chained_assignment = None
 
 
 def infer_freq(s: pd.Series[float]) -> str | None:
@@ -65,7 +65,7 @@ def _has_spikes_or_dip(
     df['flag'] = df['flag'].replace([float('nan')], [0.0]).astype(bool)
     # TODO: also return where, and make sure the spike or dip is labelled
     # correctly with surroundings, maybe an additional rolling?
-    data: pd.DataFrame = df[df['flag'] == True]  # type: ignore[assignment] # noqa: E712,E501
+    data: pd.DataFrame = df[df['flag'] == True]  # noqa: E712
     return bool(df['flag'].any()), data
 
 
@@ -77,7 +77,7 @@ def _is_persistent(
     df = s.to_frame()
     df['flag'] = False
     if len(df) <= window:
-        return False, df[df['flag'] == True]  # type: ignore[return-value] # noqa: E712,E501
+        return False, df[df['flag'] == True]  # noqa: E712
 
     def _equals(x: pd.Series[float]) -> bool:
         if len(x) >= window:
@@ -91,7 +91,7 @@ def _is_persistent(
         min_periods=1,
         closed='right',
     ).apply(_equals).astype(bool)
-    data: pd.DataFrame = df[df['flag'] == True]  # type: ignore[assignment] # noqa: E712,E501
+    data: pd.DataFrame = df[df['flag'] == True]  # noqa: E712
     return bool(df['flag'].any()), data
 
 
