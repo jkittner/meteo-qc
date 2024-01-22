@@ -75,7 +75,7 @@ nice way e.g. using an `html` template to render it.
                 'missing_timestamps': Result(
                     function='missing_timestamps',
                     passed=False,
-                    msg='missing 1 timestamps (assumed frequency: 10T)',
+                    msg='missing 1 timestamps (assumed frequency: 10min)',
                     data=None,
                 ),
                 'null_values': Result(
@@ -110,7 +110,7 @@ nice way e.g. using an `html` template to render it.
                 'missing_timestamps': Result(
                     function='missing_timestamps',
                     passed=False,
-                    msg='missing 1 timestamps (assumed frequency: 10T)',
+                    msg='missing 1 timestamps (assumed frequency: 10min)',
                     data=None,
                 ),
                 'null_values': Result(

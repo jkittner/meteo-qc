@@ -73,7 +73,7 @@ class ColumnMapping:
                 index=pd.date_range(
                     start='2022-01-01 10:00',
                     end='2022-01-01 10:10',
-                    freq='10T',
+                    freq='10min',
                 ),
                 columns=['air_temperature_2m'],
             )

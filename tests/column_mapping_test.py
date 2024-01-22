@@ -28,7 +28,7 @@ def test_column_mapping_autodetect_from_df():
         index=pd.date_range(
             start='2022-01-01 10:00',
             end='2022-01-01 10:20',
-            freq='10T',
+            freq='10min',
         ),
         columns=['temp_mean', 'pressure_mean'],
     )
