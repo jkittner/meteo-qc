@@ -65,7 +65,7 @@ def _has_spikes_or_dip(
     df['flag'] = df['flag'].replace([float('nan')], [0.0]).astype(bool)
     # TODO: also return where, and make sure the spike or dip is labelled
     # correctly with surroundings, maybe an additional rolling?
-    data: pd.DataFrame = df[df['flag'] == True]  # noqa: E712
+    data = df[df['flag'] == True]  # noqa: E712
     return bool(df['flag'].any()), data
 
 
@@ -91,7 +91,7 @@ def _is_persistent(
         min_periods=1,
         closed='right',
     ).apply(_equals).astype(bool)
-    data: pd.DataFrame = df[df['flag'] == True]  # noqa: E712
+    data = df[df['flag'] == True]  # noqa: E712
     return bool(df['flag'].any()), data
 
 
