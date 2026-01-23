@@ -37,7 +37,7 @@ def missing_timestamps(s: pd.Series[float]) -> Result:
 
     df = df.reindex(full_idx).loc[timestamps_missing].reset_index()
     # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
+    df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if nr_missing > 0:
@@ -66,7 +66,7 @@ def null_values(s: pd.Series[float]) -> Result:
 
     df = df.reset_index()
     # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
+    df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if null_vals > 0:

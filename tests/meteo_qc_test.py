@@ -26,10 +26,9 @@ def test_invalid_dataframe_index():
         apply_qc(df, column_mapping)
 
     msg, = exc_info.value.args
-    assert msg == (
+    assert (
         'the pandas.DataFrame index must be of type pandas.DatetimeIndex, '
-        "not <class 'pandas.core.indexes.range.RangeIndex'>"
-    )
+    ) in msg
 
 
 def test_invalid_dataframe_index_not_timezone_aware():
