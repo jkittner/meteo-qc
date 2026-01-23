@@ -134,7 +134,7 @@ def range_check(
     df = df.reset_index()
     # we need something json serializable
     # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
+    df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     result = bool(df['flag'].any())
