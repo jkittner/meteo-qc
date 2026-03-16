@@ -217,6 +217,51 @@ def test_can_register_new_check(data):
     assert temp_result.msg is None
 
 
+def test_persistence_check_timestamp_correct():
+    column_mapping = ColumnMapping()
+    column_mapping['pressure_persistent'].add_group('pressure')
+
+    data = pd.DataFrame(
+        data={'pressure_persistent': [10] * 10},
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 19:00',
+            freq='60min',
+            tz='UTC',
+            name='date',
+        ),
+    )
+    results = apply_qc(data, column_mapping)['columns']
+    assert results['pressure_persistent']['results']['persistence_check'].data == [  # noqa: E501
+        [1641049200000, 10, True],
+        [1641052800000, 10, True],
+        [1641056400000, 10, True],
+        [1641060000000, 10, True],
+        [1641063600000, 10, True],
+    ]
+
+
+def test_spike_dip_check_timestamp_correct():
+    column_mapping = ColumnMapping()
+    column_mapping['pressure_spikes'].add_group('pressure')
+
+    data = pd.DataFrame(
+        data={'pressure_spikes': [10, 50, 10]},
+        index=pd.date_range(
+            start='2022-01-01 10:00',
+            end='2022-01-01 12:00',
+            freq='60min',
+            tz='UTC',
+            name='date',
+        ),
+    )
+    results = apply_qc(data, column_mapping)['columns']
+    assert results['pressure_spikes']['results']['spike_dip_check'].data == [
+        [1641034800000, 50, True],
+        [1641038400000, 10, True],
+    ]
+
+
 def test_changed_column_mapping_pressure_persistence_check(data):
     column_mapping = ColumnMapping()
     column_mapping['pressure_persistent'].add_group('pressure')

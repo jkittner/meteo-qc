@@ -59,7 +59,7 @@ def _has_spikes_or_dip(
         min_periods=1,
         closed='right',
     ).apply(_compare)
-    # if there are not enough valid obervations, rolling returns NaN.
+    # if there are not enough valid observations, rolling returns NaN.
     # Converting this to a bool results in True sind float('nan') is truthy
     # set all NaN to False, since we don't want to flag them here
     df['flag'] = df['flag'].replace([float('nan')], [0.0]).astype(bool)
@@ -192,7 +192,7 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     df = df.reset_index()
     # we need something json serializable
     # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
+    df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if result is True:
@@ -264,7 +264,7 @@ def persistence_check(
     df = df.reset_index()
     # we need something json serializable
     # timestamp to milliseconds
-    df[date_name] = df[date_name].astype(int) // 1000000
+    df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
     df = df.replace([float('nan')], [None])
     if result is True:
