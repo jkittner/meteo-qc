@@ -148,7 +148,7 @@ nice way e.g. using an `html` template to render it.
 ```
 
 It is also possible to write and register your own functions if they are not
-already in the predefined [Groups](groups).
+already in the predefined {doc}`Groups <groups>`.
 
 You can also register the same function for multiple groups with different arguments.
 
