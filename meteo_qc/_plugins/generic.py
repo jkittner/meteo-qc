@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
+
 import pandas as pd
 
 from meteo_qc._data import register
@@ -20,7 +22,7 @@ def missing_timestamps(s: pd.Series[float]) -> Result:
 
     df = s.to_frame()
     if df.index.name is None:
-        date_name = 'index'
+        date_name: Hashable = 'index'
     else:
         date_name = df.index.name
 
@@ -39,7 +41,7 @@ def missing_timestamps(s: pd.Series[float]) -> Result:
     # timestamp to milliseconds
     df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
+    df = df.replace({float('nan'): None})
     if nr_missing > 0:
         return Result(
             function=missing_timestamps.__name__,
@@ -60,7 +62,7 @@ def null_values(s: pd.Series[float]) -> Result:
     null_vals = sum(df['flag'])
 
     if df.index.name is None:
-        date_name = 'index'
+        date_name: Hashable = 'index'
     else:
         date_name = df.index.name
 
@@ -68,7 +70,7 @@ def null_values(s: pd.Series[float]) -> Result:
     # timestamp to milliseconds
     df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
+    df = df.replace({float('nan'): None})
     if null_vals > 0:
         return Result(
             function=null_values.__name__,
