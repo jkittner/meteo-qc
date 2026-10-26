@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pkgutil
 from collections import defaultdict
+from collections.abc import Callable
 from typing import Any
-from typing import Callable
 from typing import NamedTuple
 from typing import TypedDict
 

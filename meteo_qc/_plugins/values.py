@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Hashable
 from datetime import timedelta
 
 import pandas as pd
 
 from meteo_qc._data import register
 from meteo_qc._data import Result
-
-pd.options.mode.chained_assignment = None
 
 
 def infer_freq(s: pd.Series[float]) -> str | None:
@@ -27,7 +26,8 @@ def infer_freq(s: pd.Series[float]) -> str | None:
     if len(s) < 3:
         return None
     idx_diff = s.index[1:] - s.index[:-1]
-    offset = pd.tseries.frequencies.to_offset(idx_diff.min())
+    min_diff: pd.Timedelta = idx_diff.min()
+    offset = pd.tseries.frequencies.to_offset(min_diff)
     freq = None
     if offset is not None:  # pragma no branch
         freq = offset.freqstr
@@ -127,7 +127,7 @@ def range_check(
     )
 
     if df.index.name is None:
-        date_name = 'index'
+        date_name: Hashable = 'index'
     else:
         date_name = df.index.name
 
@@ -136,7 +136,7 @@ def range_check(
     # timestamp to milliseconds
     df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
+    df = df.replace({float('nan'): None})
     result = bool(df['flag'].any())
     if result is True:
         return Result(
@@ -185,7 +185,7 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     result, df = _has_spikes_or_dip(s, delta=_delta)
 
     if df.index.name is None:
-        date_name = 'index'
+        date_name: Hashable = 'index'
     else:  # pragma: no cover
         date_name = df.index.name
 
@@ -194,7 +194,7 @@ def spike_dip_check(s: pd.Series[float], delta: float) -> Result:
     # timestamp to milliseconds
     df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
+    df = df.replace({float('nan'): None})
     if result is True:
         return Result(
             function=spike_dip_check.__name__,
@@ -257,7 +257,7 @@ def persistence_check(
         excludes=excludes,
     )
     if df.index.name is None:
-        date_name = 'index'
+        date_name: Hashable = 'index'
     else:  # pragma: no cover
         date_name = df.index.name
 
@@ -266,7 +266,7 @@ def persistence_check(
     # timestamp to milliseconds
     df[date_name] = df[date_name].dt.as_unit('ms').astype(int)
     # replace NaNs with NULLs, since json tokenizing can't handle them
-    df = df.replace([float('nan')], [None])
+    df = df.replace({float('nan'): None})
     if result is True:
         return Result(
             function=persistence_check.__name__,
